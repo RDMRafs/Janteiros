@@ -580,6 +580,36 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.chat-history {
+    display: grid;
+    gap: 10px;
+    margin: 16px 0 20px;
+}
+
+.chat-bubble {
+    border-radius: 18px;
+    padding: 14px 16px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.chat-bubble.user {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.chat-bubble.assistant {
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.chat-role {
+    display: inline-block;
+    margin-bottom: 6px;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+}
+
 .analysis-column {
     padding: 16px;
 }

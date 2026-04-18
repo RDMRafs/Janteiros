@@ -54,6 +54,8 @@
                                 <textarea id="prompt" placeholder="e.g. I want to focus on Data Science and avoid Fridays. Max 20 ECTS."></textarea>
                             </div>
 
+                            <div id="planner-session-card" class="file-card hidden"></div>
+
                             <button type="submit" id="generate-btn" class="btn-primary">Generate Smart Plan</button>
                         </form>
                     </div>
@@ -72,14 +74,18 @@
                                 <div class="header-row">
                                     <div>
                                         <h3>Optimized Schedule</h3>
-                                        <p>Review and accept your new academic path.</p>
+                                        <p>Keep chatting with the cached handbook and evolving academic profile.</p>
                                     </div>
                                     <div class="actions">
                                         <button id="reset-btn" class="btn-secondary">Discard</button>
+                                        <button id="reset-planner-session-btn" class="btn-secondary">New Handbook Session</button>
                                         <button id="accept-plan-btn" class="btn-primary inline-btn">Accept & Save Plan</button>
                                     </div>
                                 </div>
                             </div>
+
+                            <div id="planner-memory-banner" class="info-banner hidden"></div>
+                            <div id="planner-chat-history" class="chat-history"></div>
 
                             <div id="schedule-container" class="schedule-grid"></div>
 
@@ -88,9 +94,9 @@
                                 <div id="rationale-text"></div>
 
                                 <div id="followup-area" class="followup-area">
-                                    <p>Have questions about this plan?</p>
+                                    <p>Ask follow-up questions without re-uploading the handbook.</p>
                                     <div class="inline-form">
-                                        <input type="text" id="followup-input" placeholder="e.g. Can I swap the Tuesday module?">
+                                        <input type="text" id="followup-input" placeholder="e.g. Which lectures are mandatory in semester 1?">
                                         <button id="followup-btn" class="btn-primary inline-btn">Ask AI</button>
                                     </div>
                                     <div id="followup-response" class="followup-response"></div>

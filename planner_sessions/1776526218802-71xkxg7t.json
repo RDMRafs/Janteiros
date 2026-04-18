@@ -1,0 +1,35 @@
+{
+  "sessionId": "1776526218802-71xkxg7t",
+  "handbook": {
+    "fileName": "",
+    "rawText": "",
+    "chunks": [],
+    "structuredProfile": {
+      "programName": "",
+      "degreeType": "",
+      "faculty": "",
+      "mandatoryModules": [],
+      "electiveModules": [],
+      "recommendedSemesterHints": [],
+      "summary": ""
+    }
+  },
+  "academicProfile": {
+    "programName": "",
+    "degreeType": "",
+    "faculty": "",
+    "mandatoryModules": [],
+    "electiveModules": [],
+    "semesterRecommendations": {},
+    "recommendedCoursesHistory": [],
+    "selectedCourses": [],
+    "completedCourses": [],
+    "uploadedDocuments": [],
+    "conversationSummary": ""
+  },
+  "conversation": [],
+  "lastPlan": {
+    "schedule": [],
+    "rationale": ""
+  }
+}

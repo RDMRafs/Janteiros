@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scheduleContainer = document.getElementById('schedule-container');
     const rationaleText = document.getElementById('rationale-text');
     const resetBtn = document.getElementById('reset-btn');
+    const resetPlannerSessionBtn = document.getElementById('reset-planner-session-btn');
     const acceptPlanBtn = document.getElementById('accept-plan-btn');
     const followupBtn = document.getElementById('followup-btn');
     const followupInput = document.getElementById('followup-input');
@@ -21,6 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedFileName = document.getElementById('selected-file-name');
     const statusIcon = document.getElementById('status-icon');
     const statusTextDisplay = document.getElementById('status-text-display');
+    const plannerSessionCard = document.getElementById('planner-session-card');
+    const plannerMemoryBanner = document.getElementById('planner-memory-banner');
+    const plannerChatHistory = document.getElementById('planner-chat-history');
 
     const searchThesesBtn = document.getElementById('search-theses-btn');
     const thesisQueryInput = document.getElementById('thesis-query');
@@ -58,6 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentPlanData = '';
     let currentCvProfile = null;
+    let plannerSessionId = localStorage.getItem('academicaiPlannerSessionId') || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    let plannerState = null;
+
+    localStorage.setItem('academicaiPlannerSessionId', plannerSessionId);
 
     function escapeHtml(value = '') {
         return value
@@ -79,6 +87,104 @@ document.addEventListener('DOMContentLoaded', () => {
             statusIcon.textContent = '✅';
             statusTextDisplay.textContent = 'Handbook loaded!';
             dropZone.style.borderColor = 'var(--primary)';
+        }
+    }
+
+    function renderPlannerChatHistory(conversation = []) {
+        if (!conversation.length) {
+            plannerChatHistory.innerHTML = '';
+            plannerChatHistory.classList.add('hidden');
+            return;
+        }
+
+        plannerChatHistory.classList.remove('hidden');
+        plannerChatHistory.innerHTML = conversation
+            .slice(-8)
+            .map((turn) => `
+                <div class="chat-bubble ${turn.role === 'assistant' ? 'assistant' : 'user'}">
+                    <span class="chat-role">${escapeHtml(turn.role === 'assistant' ? 'AcademicAI' : 'You')}</span>
+                    <p>${escapeHtml(turn.message || '')}</p>
+                </div>
+            `)
+            .join('');
+    }
+
+    function renderPlannerState(state) {
+        plannerState = state;
+        if (!state) {
+            plannerSessionCard.classList.add('hidden');
+            plannerMemoryBanner.classList.add('hidden');
+            renderPlannerChatHistory([]);
+            return;
+        }
+
+        const handbookProfile = state.handbookProfile || {};
+        const academicProfile = state.academicProfile || {};
+        const hasHandbook = Boolean(state.hasHandbook);
+
+        if (hasHandbook) {
+            plannerSessionCard.classList.remove('hidden');
+            plannerSessionCard.innerHTML = `
+                <strong>${escapeHtml(state.handbookFileName || 'Handbook cached')}</strong>
+                <span>${escapeHtml(handbookProfile.programName || academicProfile.programName || 'Program context remembered')}</span>
+            `;
+            plannerMemoryBanner.classList.remove('hidden');
+            plannerMemoryBanner.innerHTML = `
+                Session memory active: ${escapeHtml(handbookProfile.degreeType || academicProfile.degreeType || 'Program')} ${escapeHtml(handbookProfile.programName || academicProfile.programName || '')}
+                ${academicProfile.conversationSummary ? `• ${escapeHtml(academicProfile.conversationSummary.slice(0, 180))}` : ''}
+            `;
+            statusIcon.textContent = '✅';
+            statusTextDisplay.textContent = 'Handbook cached for this planner session';
+            selectedFileName.textContent = state.handbookFileName ? `Cached: ${state.handbookFileName}` : selectedFileName.textContent;
+            dropZone.style.borderColor = 'var(--primary)';
+        } else {
+            plannerSessionCard.classList.add('hidden');
+            plannerMemoryBanner.classList.add('hidden');
+        }
+
+        renderPlannerChatHistory(state.conversation || []);
+    }
+
+    function renderPlanResult(data, appendFollowup = false) {
+        agentStatus.classList.add('hidden');
+        resultsContent.classList.remove('hidden');
+        inputPanel.classList.add('hidden');
+        outputPanel.classList.add('full-width');
+        outputPanel.classList.remove('hidden');
+
+        currentPlanData = JSON.stringify(data.schedule || []);
+        scheduleContainer.innerHTML = '';
+        (data.schedule || []).forEach((item) => {
+            const div = document.createElement('div');
+            div.className = `schedule-card ${item.type || 'mandatory'}`;
+            div.innerHTML = `
+                <h4>${escapeHtml(item.course || '')}</h4>
+                <p>${escapeHtml(item.time_slot || '')}</p>
+                <span>${escapeHtml(item.type || 'mandatory')}</span>
+            `;
+            scheduleContainer.appendChild(div);
+        });
+        rationaleText.innerHTML = data.rationale || data.answer || '';
+        if (appendFollowup) {
+            followupResponse.innerHTML = data.answer || data.rationale || '';
+        }
+        renderPlannerState(data.plannerState || plannerState);
+    }
+
+    async function loadPlannerSession() {
+        try {
+            const response = await fetch(`/planner/session?sessionId=${encodeURIComponent(plannerSessionId)}`);
+            const data = await response.json();
+            renderPlannerState(data);
+            if (data.lastPlan?.schedule?.length || data.lastPlan?.rationale) {
+                renderPlanResult({
+                    schedule: data.lastPlan.schedule || [],
+                    rationale: data.lastPlan.rationale || '',
+                    plannerState: data,
+                });
+            }
+        } catch (error) {
+            renderPlannerState(null);
         }
     }
 
@@ -293,10 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
     dropZone?.addEventListener('click', () => handbookInput?.click());
     handbookInput?.addEventListener('change', updatePlannerUploadState);
 
-    plannerForm?.addEventListener('submit', async (e) => {
+        plannerForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!handbookInput.files[0]) {
-            alert('Please upload a handbook.');
+        if (!handbookInput.files[0] && !(plannerState && plannerState.hasHandbook)) {
+            alert('Please upload a handbook to start the planner session.');
             return;
         }
 
@@ -307,32 +413,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formData = new FormData();
         formData.append('prompt', promptInput.value);
-        formData.append('handbook', handbookInput.files[0]);
+        formData.append('sessionId', plannerSessionId);
+        if (handbookInput.files[0]) {
+            formData.append('handbook', handbookInput.files[0]);
+        }
 
         try {
             const resp = await fetch('/plan', { method: 'POST', body: formData });
             const data = await resp.json();
-
-            agentStatus.classList.add('hidden');
-            resultsContent.classList.remove('hidden');
-            inputPanel.classList.add('hidden');
-            outputPanel.classList.add('full-width');
-
-            currentPlanData = JSON.stringify(data.schedule || []);
-            scheduleContainer.innerHTML = '';
-            (data.schedule || []).forEach((item) => {
-                const div = document.createElement('div');
-                div.className = `schedule-card ${item.type || 'mandatory'}`;
-                div.innerHTML = `
-                    <h4>${escapeHtml(item.course || '')}</h4>
-                    <p>${escapeHtml(item.time_slot || '')}</p>
-                    <span>${escapeHtml(item.type || 'mandatory')}</span>
-                `;
-                scheduleContainer.appendChild(div);
-            });
-            rationaleText.innerHTML = data.rationale || '';
+            if (data.error) throw new Error(data.error);
+            if (data.sessionId) {
+                plannerSessionId = data.sessionId;
+                localStorage.setItem('academicaiPlannerSessionId', plannerSessionId);
+            }
+            renderPlanResult(data);
         } catch (error) {
-            alert('Error generating plan.');
+            alert(error.message || 'Error generating plan.');
             resetAgentState();
         } finally {
             generateBtn.disabled = false;
@@ -348,14 +444,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const fd = new FormData();
         fd.append('question', question);
-        fd.append('current_plan', currentPlanData);
+        fd.append('sessionId', plannerSessionId);
 
         try {
             const resp = await fetch('/plan/followup', { method: 'POST', body: fd });
             const data = await resp.json();
-            followupResponse.innerHTML = data.answer || 'No response.';
+            if (data.error) throw new Error(data.error);
+            renderPlanResult(data, true);
         } catch (error) {
-            followupResponse.innerHTML = 'Error connecting to AI.';
+            followupResponse.innerHTML = error.message || 'Error connecting to AI.';
         } finally {
             followupBtn.disabled = false;
             followupInput.value = '';
@@ -389,8 +486,28 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('course', heading.textContent);
             await fetch('/history/add', { method: 'POST', body: fd });
         }
+        const plannerFd = new FormData();
+        plannerFd.append('sessionId', plannerSessionId);
+        await fetch('/plan/accept', { method: 'POST', body: plannerFd });
         alert('Plan saved. You can enrich modules with grades and ECTS in Academic Profile.');
         loadHistory();
+        loadPlannerSession();
+    });
+
+    resetPlannerSessionBtn?.addEventListener('click', async () => {
+        plannerSessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        localStorage.setItem('academicaiPlannerSessionId', plannerSessionId);
+        await fetch(`/planner/session?sessionId=${encodeURIComponent(plannerSessionId)}`, { method: 'DELETE' });
+        promptInput.value = '';
+        handbookInput.value = '';
+        selectedFileName.textContent = '';
+        followupResponse.innerHTML = '';
+        currentPlanData = '';
+        statusIcon.textContent = '📄';
+        statusTextDisplay.textContent = 'Drop course handbook (PDF) or click to browse';
+        dropZone.style.borderColor = 'var(--glass-border)';
+        resetAgentState();
+        loadPlannerSession();
     });
 
     cvDropZone?.addEventListener('click', () => cvFileInput?.click());
@@ -494,4 +611,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadHistory();
     loadCvProfile();
+    loadPlannerSession();
 });

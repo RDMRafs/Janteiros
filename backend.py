@@ -2,6 +2,7 @@ import io
 import json
 import os
 import re
+import uuid
 import zipfile
 from collections import defaultdict
 from typing import Optional
@@ -30,6 +31,7 @@ brt = boto3.client(service_name="bedrock-runtime", region_name=region)
 
 HISTORY_FILE = "student_history.json"
 CV_PROFILE_FILE = "cv_profile.json"
+PLANNER_SESSION_DIR = "planner_sessions"
 
 SKILL_AREA_RULES = {
     "Programming": ["programming", "python", "java", "c++", "software development", "coding", "informatics"],
@@ -64,6 +66,20 @@ SECTION_PATTERNS = {
     "skills": ["skills", "technical skills", "competencies", "technologies"],
     "certifications": ["certifications", "certificates", "licenses"],
     "languages": ["languages", "language skills"],
+}
+
+DEFAULT_PLANNER_PROFILE = {
+    "programName": "",
+    "degreeType": "",
+    "faculty": "",
+    "mandatoryModules": [],
+    "electiveModules": [],
+    "semesterRecommendations": {},
+    "recommendedCoursesHistory": [],
+    "selectedCourses": [],
+    "completedCourses": [],
+    "uploadedDocuments": [],
+    "conversationSummary": "",
 }
 
 
@@ -131,6 +147,62 @@ def save_cv_profile(profile):
         json.dump(profile, f, ensure_ascii=False, indent=2)
 
 
+def ensure_planner_session_dir():
+    os.makedirs(PLANNER_SESSION_DIR, exist_ok=True)
+
+
+def session_file_path(session_id):
+    ensure_planner_session_dir()
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", session_id or "")
+    if not safe_id:
+        safe_id = uuid.uuid4().hex
+    return os.path.join(PLANNER_SESSION_DIR, f"{safe_id}.json")
+
+
+def create_empty_planner_session(session_id=None):
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", session_id or "") or uuid.uuid4().hex
+    return {
+        "sessionId": safe_id,
+        "handbook": {
+            "fileName": "",
+            "rawText": "",
+            "chunks": [],
+            "structuredProfile": {
+                "programName": "",
+                "degreeType": "",
+                "faculty": "",
+                "mandatoryModules": [],
+                "electiveModules": [],
+                "recommendedSemesterHints": [],
+                "summary": "",
+            },
+        },
+        "academicProfile": json.loads(json.dumps(DEFAULT_PLANNER_PROFILE)),
+        "conversation": [],
+        "lastPlan": {"schedule": [], "rationale": ""},
+    }
+
+
+def load_planner_session(session_id):
+    if not session_id:
+        return None
+    path = session_file_path(session_id)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data
+    except Exception:
+        return None
+
+
+def save_planner_session(session_data):
+    path = session_file_path(session_data.get("sessionId"))
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(session_data, f, ensure_ascii=False, indent=2)
+
+
 def extract_json(text):
     text = text.strip()
     start_index = text.find("{")
@@ -171,6 +243,173 @@ def extract_text_from_upload(filename, raw_bytes):
     if extension == ".docx":
         return parse_docx_bytes(raw_bytes)
     raise ValueError("Unsupported file type. Please upload PDF, TXT, or DOCX.")
+
+
+def chunk_text(text, chunk_size=1800, overlap=250):
+    clean_text = sanitize_text(text)
+    if not clean_text:
+        return []
+
+    chunks = []
+    start = 0
+    while start < len(clean_text):
+        end = min(len(clean_text), start + chunk_size)
+        chunks.append(clean_text[start:end])
+        if end >= len(clean_text):
+            break
+        start = max(0, end - overlap)
+    return chunks
+
+
+def unique_preserve_order(items):
+    seen = set()
+    ordered = []
+    for item in items:
+        normalized = sanitize_text(item)
+        if normalized and normalized.lower() not in seen:
+            seen.add(normalized.lower())
+            ordered.append(normalized)
+    return ordered
+
+
+def extract_modules_with_keywords(lines, keywords):
+    matches = []
+    for line in lines:
+        lowered = line.lower()
+        if any(keyword in lowered for keyword in keywords) and 4 <= len(line) <= 140:
+            matches.append(line)
+    return unique_preserve_order(matches)
+
+
+def infer_program_profile_from_text(text):
+    lines = [sanitize_text(line) for line in text.splitlines() if sanitize_text(line)]
+    lowered_text = text.lower()
+
+    program_name = ""
+    degree_type = ""
+    faculty = ""
+
+    degree_patterns = [
+        r"(bachelor(?:'s)?(?: of [a-z &/-]+)?)",
+        r"(master(?:'s)?(?: of [a-z &/-]+)?)",
+        r"(msc(?: [a-z &/-]+)?)",
+        r"(bsc(?: [a-z &/-]+)?)",
+    ]
+    for line in lines[:40]:
+        for pattern in degree_patterns:
+            match = re.search(pattern, line, flags=re.IGNORECASE)
+            if match:
+                degree_type = sanitize_text(match.group(1))
+                if not program_name:
+                    program_name = sanitize_text(re.sub(pattern, "", line, flags=re.IGNORECASE))
+                break
+        if program_name and degree_type:
+            break
+
+    if not program_name:
+        for line in lines[:20]:
+            if "informatics" in line.lower() or "science" in line.lower() or "engineering" in line.lower():
+                program_name = line
+                break
+
+    faculty_match = re.search(r"(school of [a-z ,&-]+|faculty of [a-z ,&-]+|department of [a-z ,&-]+)", lowered_text)
+    if faculty_match:
+        faculty = sanitize_text(faculty_match.group(1).title())
+
+    mandatory_modules = extract_modules_with_keywords(
+        lines,
+        ["mandatory", "pflicht", "required", "core module", "obligatory"],
+    )
+    elective_modules = extract_modules_with_keywords(
+        lines,
+        ["elective", "wahl", "optional", "specialization", "track"],
+    )
+    semester_hints = extract_modules_with_keywords(
+        lines,
+        ["semester 1", "semester 2", "semester 3", "1st semester", "2nd semester", "3rd semester", "sem. 1", "sem. 2"],
+    )
+
+    summary_parts = []
+    if program_name:
+        summary_parts.append(f"Program: {program_name}")
+    if degree_type:
+        summary_parts.append(f"Degree: {degree_type}")
+    if faculty:
+        summary_parts.append(f"Faculty: {faculty}")
+
+    return {
+        "programName": program_name,
+        "degreeType": degree_type,
+        "faculty": faculty,
+        "mandatoryModules": mandatory_modules[:40],
+        "electiveModules": elective_modules[:40],
+        "recommendedSemesterHints": semester_hints[:30],
+        "summary": " | ".join(summary_parts),
+    }
+
+
+def build_planner_profile_from_handbook(handbook_profile):
+    planner_profile = json.loads(json.dumps(DEFAULT_PLANNER_PROFILE))
+    planner_profile["programName"] = handbook_profile.get("programName", "")
+    planner_profile["degreeType"] = handbook_profile.get("degreeType", "")
+    planner_profile["faculty"] = handbook_profile.get("faculty", "")
+    planner_profile["mandatoryModules"] = handbook_profile.get("mandatoryModules", [])[:50]
+    planner_profile["electiveModules"] = handbook_profile.get("electiveModules", [])[:50]
+    planner_profile["uploadedDocuments"] = ["handbook"]
+    return planner_profile
+
+
+def merge_course_entries(existing, new_items):
+    merged = list(existing or [])
+    seen = {sanitize_text(item.get("courseName", "")).lower() for item in merged if item.get("courseName")}
+    for item in new_items or []:
+        name = sanitize_text(item.get("courseName", ""))
+        if not name or name.lower() in seen:
+            continue
+        normalized = {
+            "courseName": name,
+            "semester": sanitize_text(item.get("semester", "")),
+            "status": sanitize_text(item.get("status", "")) or "recommended",
+            "source": sanitize_text(item.get("source", "")),
+        }
+        merged.append(normalized)
+        seen.add(name.lower())
+    return merged
+
+
+def summarize_conversation(conversation):
+    snippets = []
+    for turn in conversation[-6:]:
+        role = turn.get("role", "user").capitalize()
+        message = sanitize_text(turn.get("message", ""))[:180]
+        if message:
+            snippets.append(f"{role}: {message}")
+    return " | ".join(snippets)
+
+
+def infer_requested_semester(question):
+    lowered = question.lower()
+    match = re.search(r"(semester|sem\.?)\s*(\d+)", lowered)
+    if match:
+        return f"Semester {match.group(2)}"
+    ordinal_match = re.search(r"(\d+)(st|nd|rd|th)\s+semester", lowered)
+    if ordinal_match:
+        return f"Semester {ordinal_match.group(1)}"
+    return ""
+
+
+def should_add_recommendations(question):
+    lowered = question.lower()
+    triggers = [
+        "add those",
+        "add them",
+        "save these",
+        "add to my academic profile",
+        "include these",
+        "select these",
+        "use these recommendations",
+    ]
+    return any(trigger in lowered for trigger in triggers)
 
 
 def split_into_sections(text):
@@ -540,6 +779,122 @@ Rules:
     return extract_json(raw_resp["content"][0]["text"])
 
 
+def initialize_minimal_planner_profile(handbook_profile):
+    profile = json.loads(json.dumps(DEFAULT_PLANNER_PROFILE))
+    profile["programName"] = handbook_profile.get("programName", "")
+    profile["degreeType"] = handbook_profile.get("degreeType", "")
+    profile["faculty"] = handbook_profile.get("faculty", "")
+    profile["mandatoryModules"] = handbook_profile.get("mandatoryModules", [])[:50]
+    profile["electiveModules"] = handbook_profile.get("electiveModules", [])[:50]
+    return profile
+
+
+def run_original_planner_pipeline(prompt, handbook_text, completed_names, persisted_context=""):
+    system_prompt = 'Return ONLY JSON: {"schedule": [{"course": "NAME", "time_slot": "TIME", "type": "mandatory|elective"}], "rationale": "HTML", "alternatives": []}'
+    user_msg = f"Handbook: {handbook_text}\nAlready done: {completed_names}\nGoal: {prompt}"
+    if persisted_context:
+        user_msg = f"{user_msg}\nPersisted context: {persisted_context}"
+
+    body = json.dumps(
+        {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 2500,
+            "messages": [{"role": "user", "content": user_msg}],
+            "system": system_prompt,
+        }
+    )
+    response = brt.invoke_model(modelId="anthropic.claude-3-haiku-20240307-v1:0", body=body)
+    raw_resp = json.loads(response.get("body").read())
+    return extract_json(raw_resp["content"][0]["text"])
+
+
+def build_minimal_persisted_context(session_data):
+    profile = session_data.get("academicProfile", {})
+    last_plan = session_data.get("lastPlan", {})
+    selected_courses = [item.get("courseName", "") for item in profile.get("selectedCourses", []) if item.get("courseName")]
+    saved_plans = list((profile.get("semesterRecommendations") or {}).keys())
+    context_parts = []
+    if selected_courses:
+        context_parts.append(f"Selected courses: {selected_courses[:12]}")
+    if saved_plans:
+        context_parts.append(f"Saved semester plans: {saved_plans[:6]}")
+    if last_plan.get("schedule"):
+        context_parts.append(
+            f"Latest recommendation set: {[item.get('course', '') for item in last_plan.get('schedule', [])[:10]]}"
+        )
+    return " | ".join(context_parts)
+
+
+def update_minimal_planner_state(session_data, response_payload, question):
+    profile = session_data.setdefault("academicProfile", json.loads(json.dumps(DEFAULT_PLANNER_PROFILE)))
+    semester_label = infer_requested_semester(question) or "Latest recommendation"
+
+    if response_payload.get("schedule"):
+        profile.setdefault("semesterRecommendations", {})[semester_label] = response_payload.get("schedule", [])
+        profile["recommendedCoursesHistory"] = merge_course_entries(
+            profile.get("recommendedCoursesHistory", []),
+            [
+                {
+                    "courseName": item.get("course", ""),
+                    "semester": semester_label,
+                    "status": "recommended",
+                    "source": "planner",
+                }
+                for item in response_payload.get("schedule", [])
+                if item.get("course")
+            ],
+        )
+    profile["completedCourses"] = get_student_history()
+    profile["uploadedDocuments"] = unique_preserve_order(
+        (profile.get("uploadedDocuments") or [])
+        + [session_data.get("handbook", {}).get("fileName", "")]
+    )
+    profile["conversationSummary"] = summarize_conversation(session_data.get("conversation", []))
+
+
+def save_latest_plan_to_profile(session_data):
+    latest_schedule = session_data.get("lastPlan", {}).get("schedule", [])
+    if not latest_schedule:
+        return
+
+    profile = session_data.setdefault("academicProfile", json.loads(json.dumps(DEFAULT_PLANNER_PROFILE)))
+    inferred_question = ""
+    for turn in reversed(session_data.get("conversation", [])):
+        if turn.get("role") == "user":
+            inferred_question = turn.get("message", "")
+            break
+    semester_label = infer_requested_semester(inferred_question) or "Latest recommendation"
+
+    profile["selectedCourses"] = merge_course_entries(
+        profile.get("selectedCourses", []),
+        [
+            {
+                "courseName": item.get("course", ""),
+                "semester": semester_label,
+                "status": "selected",
+                "source": "accept-plan",
+            }
+            for item in latest_schedule
+            if item.get("course")
+        ],
+    )
+    profile["conversationSummary"] = summarize_conversation(session_data.get("conversation", []))
+
+
+def planner_state_response(session_data):
+    profile = session_data.get("academicProfile", {})
+    handbook = session_data.get("handbook", {})
+    return {
+        "sessionId": session_data.get("sessionId"),
+        "hasHandbook": bool(handbook.get("rawText")),
+        "handbookFileName": handbook.get("fileName", ""),
+        "handbookProfile": handbook.get("structuredProfile", {}),
+        "academicProfile": profile,
+        "lastPlan": session_data.get("lastPlan", {}),
+        "conversation": session_data.get("conversation", []),
+    }
+
+
 @app.get("/")
 async def serve_index():
     return FileResponse("index.html")
@@ -558,6 +913,25 @@ async def serve_css():
 @app.get("/history")
 async def fetch_history():
     return {"completed_courses": get_student_history()}
+
+
+@app.get("/planner/session")
+async def fetch_planner_session(sessionId: str = ""):
+    session_data = load_planner_session(sessionId)
+    if not session_data:
+        session_data = create_empty_planner_session(sessionId)
+        save_planner_session(session_data)
+    return planner_state_response(session_data)
+
+
+@app.delete("/planner/session")
+async def reset_planner_session(sessionId: str = ""):
+    path = session_file_path(sessionId)
+    if os.path.exists(path):
+        os.remove(path)
+    session_data = create_empty_planner_session(sessionId)
+    save_planner_session(session_data)
+    return planner_state_response(session_data)
 
 
 @app.post("/history/add")
@@ -771,47 +1145,132 @@ async def search_jobs(query: str = ""):
 
 
 @app.post("/plan")
-async def generate_plan(prompt: str = Form(...), handbook: UploadFile = File(...)):
+async def generate_plan(
+    prompt: str = Form(...),
+    sessionId: str = Form(""),
+    handbook: Optional[UploadFile] = File(None),
+):
     try:
-        pdf_content = await handbook.read()
-        pdf_text = extract_text_from_upload(handbook.filename, pdf_content)
+        session_data = load_planner_session(sessionId) or create_empty_planner_session(sessionId)
+
+        if handbook and handbook.filename:
+            handbook_content = await handbook.read()
+            handbook_text = extract_text_from_upload(handbook.filename, handbook_content)
+            handbook_chunks = chunk_text(handbook_text)
+            handbook_profile = infer_program_profile_from_text(handbook_text)
+
+            session_data["handbook"] = {
+                "fileName": handbook.filename,
+                "rawText": handbook_text,
+                "chunks": handbook_chunks,
+                "structuredProfile": handbook_profile,
+            }
+            if not session_data.get("academicProfile") or not session_data["academicProfile"].get("programName"):
+                session_data["academicProfile"] = initialize_minimal_planner_profile(handbook_profile)
+        elif not session_data.get("handbook", {}).get("rawText"):
+            return {"error": "Please upload a handbook to start the planner session."}
+
+        session_data.setdefault("conversation", []).append({"role": "user", "message": prompt})
         completed_data = get_student_history()
         completed_names = [c["courseName"] for c in completed_data]
-        system_prompt = 'Return ONLY JSON: {"schedule": [{"course": "NAME", "time_slot": "TIME", "type": "mandatory|elective"}], "rationale": "HTML", "alternatives": []}'
-        user_msg = f"Handbook: {pdf_text}\nAlready done: {completed_names}\nGoal: {prompt}"
-        body = json.dumps(
+        persisted_context = build_minimal_persisted_context(session_data)
+        response_payload = run_original_planner_pipeline(
+            prompt,
+            session_data["handbook"]["rawText"],
+            completed_names,
+            persisted_context,
+        )
+        if not response_payload:
+            return {"error": "Could not generate a planner response."}
+
+        session_data["lastPlan"] = {
+            "schedule": response_payload.get("schedule", []),
+            "rationale": response_payload.get("rationale", ""),
+        }
+        session_data["conversation"].append(
             {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 2500,
-                "messages": [{"role": "user", "content": user_msg}],
-                "system": system_prompt,
+                "role": "assistant",
+                "message": sanitize_text(response_payload.get("rationale", "")),
             }
         )
-        response = brt.invoke_model(modelId="anthropic.claude-3-haiku-20240307-v1:0", body=body)
-        raw_resp = json.loads(response.get("body").read())
-        return extract_json(raw_resp["content"][0]["text"])
+        update_minimal_planner_state(session_data, response_payload, prompt)
+        save_planner_session(session_data)
+
+        return {
+            **response_payload,
+            "sessionId": session_data["sessionId"],
+            "plannerState": planner_state_response(session_data),
+        }
     except Exception as e:
         return {"error": str(e)}
 
 
 @app.post("/plan/followup")
-async def plan_followup(question: str = Form(...), current_plan: str = Form(...)):
+async def plan_followup(question: str = Form(...), sessionId: str = Form(...)):
     try:
-        system_prompt = "You are an academic advisor. Answer the student's question about the plan provided. Return short, helpful HTML."
-        user_msg = f"Current Plan: {current_plan}\n\nStudent Question: {question}"
-        body = json.dumps(
+        session_data = load_planner_session(sessionId)
+        if not session_data or not session_data.get("handbook", {}).get("rawText"):
+            return {"error": "Planner session not found. Please upload a handbook first."}
+
+        if should_add_recommendations(question):
+            save_latest_plan_to_profile(session_data)
+            session_data.setdefault("conversation", []).append({"role": "user", "message": question})
+            answer_html = "<p>Your latest recommended courses were added to your academic profile and saved for later planner turns.</p>"
+            session_data["conversation"].append({"role": "assistant", "message": "Saved the latest recommended courses to your academic profile."})
+            session_data["academicProfile"]["conversationSummary"] = summarize_conversation(session_data.get("conversation", []))
+            save_planner_session(session_data)
+            return {
+                "answer": answer_html,
+                "schedule": session_data.get("lastPlan", {}).get("schedule", []),
+                "rationale": session_data.get("lastPlan", {}).get("rationale", ""),
+                "plannerState": planner_state_response(session_data),
+            }
+
+        session_data.setdefault("conversation", []).append({"role": "user", "message": question})
+        completed_data = get_student_history()
+        completed_names = [c["courseName"] for c in completed_data]
+        persisted_context = build_minimal_persisted_context(session_data)
+        response_payload = run_original_planner_pipeline(
+            question,
+            session_data["handbook"]["rawText"],
+            completed_names,
+            persisted_context,
+        )
+        if not response_payload:
+            return {"error": "Could not generate a planner follow-up response."}
+
+        session_data["lastPlan"] = {
+            "schedule": response_payload.get("schedule", []),
+            "rationale": response_payload.get("rationale", ""),
+        }
+        session_data["conversation"].append(
             {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 1000,
-                "messages": [{"role": "user", "content": user_msg}],
-                "system": system_prompt,
+                "role": "assistant",
+                "message": sanitize_text(response_payload.get("rationale", "")),
             }
         )
-        response = brt.invoke_model(modelId="anthropic.claude-3-haiku-20240307-v1:0", body=body)
-        res = json.loads(response.get("body").read())
-        return {"answer": res["content"][0]["text"]}
+        update_minimal_planner_state(session_data, response_payload, question)
+        save_planner_session(session_data)
+
+        return {
+            "answer": response_payload.get("rationale", ""),
+            "schedule": response_payload.get("schedule", []),
+            "rationale": response_payload.get("rationale", ""),
+            "plannerState": planner_state_response(session_data),
+        }
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.post("/plan/accept")
+async def accept_plan(sessionId: str = Form(...)):
+    session_data = load_planner_session(sessionId)
+    if not session_data:
+        return {"error": "Planner session not found."}
+
+    save_latest_plan_to_profile(session_data)
+    save_planner_session(session_data)
+    return {"status": "success", "plannerState": planner_state_response(session_data)}
 
 
 if __name__ == "__main__":
