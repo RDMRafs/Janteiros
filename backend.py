@@ -1,10 +1,12 @@
 import io
+import html
 import json
 import os
 import re
 import uuid
 import zipfile
 from collections import defaultdict
+from difflib import SequenceMatcher
 from typing import Optional
 
 import boto3
@@ -80,6 +82,24 @@ DEFAULT_PLANNER_PROFILE = {
     "completedCourses": [],
     "uploadedDocuments": [],
     "conversationSummary": "",
+}
+
+TOPIC_GROUPS = {
+    "artificial intelligence": ["ai", "artificial intelligence", "intelligent systems"],
+    "machine learning": ["machine learning", "ml", "predictive modeling", "learning systems"],
+    "deep learning": ["deep learning", "neural network", "neural networks", "representation learning"],
+    "natural language processing": ["nlp", "natural language processing", "language models", "text mining"],
+    "computer vision": ["computer vision", "image analysis", "medical imaging", "visual perception", "vision"],
+    "healthcare": ["healthcare", "medical", "medicine", "clinical", "diagnostics", "biomedical", "health"],
+    "distributed systems": ["distributed systems", "distributed computing", "scalable systems", "fault tolerant", "cloud systems"],
+    "software engineering": ["software engineering", "software architecture", "testing", "requirements engineering"],
+    "backend": ["backend", "server side", "api", "microservices", "services"],
+    "cloud": ["cloud", "kubernetes", "container", "containers", "devops", "infrastructure"],
+    "robotics": ["robotics", "robot", "autonomous systems", "control"],
+    "perception": ["perception", "sensor fusion", "slam", "localization"],
+    "data science": ["data science", "analytics", "data mining", "statistical learning"],
+    "security": ["security", "cybersecurity", "privacy", "secure systems"],
+    "database": ["database", "databases", "sql", "data management", "data engineering"],
 }
 
 
@@ -410,6 +430,274 @@ def should_add_recommendations(question):
         "use these recommendations",
     ]
     return any(trigger in lowered for trigger in triggers)
+
+
+def normalize_posting(raw_posting):
+    supervisor = raw_posting.get("supervisor", {}) if isinstance(raw_posting.get("supervisor"), dict) else {}
+    orgs = supervisor.get("orgs", []) if isinstance(supervisor.get("orgs"), list) else []
+    first_org = orgs[0] if orgs and isinstance(orgs[0], dict) else {}
+    contacts = raw_posting.get("contacts", []) if isinstance(raw_posting.get("contacts"), list) else []
+
+    title = sanitize_text(
+        raw_posting.get("working_title_en")
+        or raw_posting.get("title")
+        or raw_posting.get("headline")
+        or ""
+    )
+    description = sanitize_text(
+        raw_posting.get("description_en")
+        or raw_posting.get("description")
+        or raw_posting.get("abstract")
+        or raw_posting.get("teaser")
+        or ""
+    )
+    chair = sanitize_text(
+        first_org.get("org_name_en")
+        or first_org.get("org_name")
+        or supervisor.get("org_name_en")
+        or raw_posting.get("chair")
+        or raw_posting.get("institute")
+        or ""
+    )
+    url = sanitize_text(
+        raw_posting.get("url")
+        or raw_posting.get("link")
+        or raw_posting.get("source_url")
+        or ""
+    )
+    posting_id = sanitize_text(str(raw_posting.get("id") or raw_posting.get("_id") or ""))
+
+    email_candidates = []
+    for contact in contacts:
+        if isinstance(contact, dict):
+            email_candidates.extend([contact.get("email"), contact.get("mail")])
+    email_candidates.extend(re.findall(r"[\w.+-]+@[\w-]+\.[\w.-]+", description))
+    emails = sorted({sanitize_text(email).lower() for email in email_candidates if sanitize_text(email)})
+
+    normalized = {
+        "id": posting_id,
+        "title": title,
+        "description": description,
+        "chair": chair,
+        "url": url,
+        "emails": emails,
+        "raw": raw_posting,
+    }
+    normalized["normalizedTitle"] = re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
+    normalized["normalizedChair"] = re.sub(r"[^a-z0-9]+", " ", chair.lower()).strip()
+    normalized["normalizedDescription"] = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", description.lower())).strip()
+    normalized["searchText"] = " ".join(
+        [
+            normalized["normalizedTitle"],
+            normalized["normalizedChair"],
+            normalized["normalizedDescription"],
+        ]
+    ).strip()
+    normalized["metadataCompleteness"] = sum(
+        1
+        for value in [title, description, chair, url, posting_id]
+        if sanitize_text(str(value))
+    ) + len(emails)
+    return normalized
+
+
+def expand_query_topics(query):
+    lowered = sanitize_text(query).lower()
+    expanded = {token for token in re.findall(r"[a-z0-9]+", lowered) if len(token) > 2}
+
+    for canonical, related_terms in TOPIC_GROUPS.items():
+        trigger_terms = [canonical] + related_terms
+        if any(term in lowered for term in trigger_terms):
+            expanded.update(re.findall(r"[a-z0-9]+", canonical))
+            for term in related_terms:
+                expanded.update(re.findall(r"[a-z0-9]+", term.lower()))
+
+    if "medicine" in expanded or "medical" in expanded:
+        expanded.update(["healthcare", "clinical", "diagnostics"])
+    if "distributed" in expanded:
+        expanded.update(["scalable", "cloud", "microservices", "fault", "backend"])
+    if "language" in expanded and "processing" in expanded:
+        expanded.update(["nlp", "text", "llm"])
+    if "robotics" in expanded:
+        expanded.update(["robot", "perception", "autonomous", "control"])
+
+    return expanded
+
+
+def token_overlap_score(query_tokens, text):
+    if not query_tokens:
+        return 0.0
+    text_tokens = set(re.findall(r"[a-z0-9]+", text.lower()))
+    if not text_tokens:
+        return 0.0
+    overlap = len(query_tokens & text_tokens)
+    return overlap / len(query_tokens)
+
+
+def phrase_similarity(left, right):
+    if not left or not right:
+        return 0.0
+    return SequenceMatcher(None, left, right).ratio()
+
+
+def compute_semantic_relevance(query, posting):
+    query_text = sanitize_text(query).lower()
+    if not query_text:
+        return 0.0
+
+    query_tokens = expand_query_topics(query_text)
+    title = posting.get("normalizedTitle", "")
+    description = posting.get("normalizedDescription", "")
+    chair = posting.get("normalizedChair", "")
+
+    title_overlap = token_overlap_score(query_tokens, title)
+    description_overlap = token_overlap_score(query_tokens, description)
+    chair_overlap = token_overlap_score(query_tokens, chair)
+
+    title_similarity = phrase_similarity(query_text, title)
+    description_similarity = phrase_similarity(query_text, description[:400])
+
+    exact_phrase_bonus = 0.0
+    if query_text in posting.get("searchText", ""):
+        exact_phrase_bonus += 0.25
+
+    canonical_bonus = 0.0
+    for canonical, related_terms in TOPIC_GROUPS.items():
+        all_terms = [canonical] + related_terms
+        query_hits = sum(1 for term in all_terms if term in query_text)
+        posting_hits = sum(1 for term in all_terms if term in posting.get("searchText", ""))
+        if query_hits and posting_hits:
+            canonical_bonus += 0.18
+
+    score = (
+        0.42 * title_overlap
+        + 0.22 * description_overlap
+        + 0.1 * chair_overlap
+        + 0.16 * title_similarity
+        + 0.06 * description_similarity
+        + exact_phrase_bonus
+        + canonical_bonus
+    )
+    return round(score, 4)
+
+
+def duplicate_score(left, right):
+    same_url = bool(left.get("url") and left.get("url") == right.get("url"))
+    same_id = bool(left.get("id") and left.get("id") == right.get("id"))
+    shared_email = bool(set(left.get("emails", [])) & set(right.get("emails", [])))
+    title_similarity = phrase_similarity(left.get("normalizedTitle", ""), right.get("normalizedTitle", ""))
+    description_similarity = phrase_similarity(
+        left.get("normalizedDescription", "")[:600],
+        right.get("normalizedDescription", "")[:600],
+    )
+    chair_similarity = phrase_similarity(left.get("normalizedChair", ""), right.get("normalizedChair", ""))
+
+    score = 0.0
+    if same_url:
+        score += 1.0
+    if same_id:
+        score += 1.0
+    if shared_email:
+        score += 0.6
+    score += 0.75 * title_similarity
+    score += 0.45 * description_similarity
+    score += 0.2 * chair_similarity
+    if title_similarity > 0.93 and chair_similarity > 0.7:
+        score += 0.5
+    return round(score, 4)
+
+
+def choose_stronger_posting(left, right):
+    left_quality = left.get("metadataCompleteness", 0) + len(left.get("description", ""))
+    right_quality = right.get("metadataCompleteness", 0) + len(right.get("description", ""))
+    if right.get("semanticScore", 0) > left.get("semanticScore", 0):
+        right_quality += 15
+    elif left.get("semanticScore", 0) > right.get("semanticScore", 0):
+        left_quality += 15
+    return right if right_quality > left_quality else left
+
+
+def deduplicate_postings(postings):
+    unique_postings = []
+    for posting in postings:
+        matched_index = None
+        for index, existing in enumerate(unique_postings):
+            if duplicate_score(existing, posting) >= 1.18:
+                matched_index = index
+                break
+        if matched_index is None:
+            unique_postings.append(posting)
+        else:
+            unique_postings[matched_index] = choose_stronger_posting(unique_postings[matched_index], posting)
+    return unique_postings
+
+
+def rank_postings_by_topic(query, postings, limit=12):
+    normalized = [normalize_posting(posting) for posting in postings]
+    for posting in normalized:
+        posting["semanticScore"] = compute_semantic_relevance(query, posting)
+
+    deduplicated = deduplicate_postings(normalized)
+    ranked = sorted(
+        deduplicated,
+        key=lambda item: (
+            item.get("semanticScore", 0.0),
+            item.get("metadataCompleteness", 0),
+            len(item.get("description", "")),
+        ),
+        reverse=True,
+    )
+
+    if sanitize_text(query):
+        ranked = [item for item in ranked if item.get("semanticScore", 0) > 0.08][:limit]
+        if not ranked:
+            ranked = sorted(
+                deduplicated,
+                key=lambda item: (item.get("metadataCompleteness", 0), len(item.get("description", ""))),
+                reverse=True,
+            )[:limit]
+    else:
+        ranked = ranked[:limit]
+    return ranked
+
+
+def render_postings_html(postings, empty_message):
+    if not postings:
+        return f"<div class='opportunity-card'><div class='description'>{html.escape(empty_message)}</div></div>"
+
+    cards = []
+    for posting in postings:
+        title = html.escape(posting.get("title") or "Untitled opportunity")
+        chair = html.escape(posting.get("chair") or "Institute / chair not specified")
+        description = html.escape(posting.get("description") or "No detailed description available.")
+        if len(description) > 700:
+            description = f"{description[:697]}..."
+        url = posting.get("url")
+        score = posting.get("semanticScore", 0)
+        footer = ""
+        title_markup = f"<span class='result-title-static'>{title}</span>"
+        if url and re.match(r"^https?://", url, flags=re.IGNORECASE):
+            safe_url = html.escape(url, quote=True)
+            title_markup = (
+                f"<a class='result-title-link' href='{safe_url}' target='_blank' "
+                f"rel='noopener noreferrer'>{title}</a>"
+            )
+            footer = f"<p><a href='{safe_url}' target='_blank' rel='noopener noreferrer'>Open posting</a></p>"
+
+        cards.append(
+            f"""
+            <div class='opportunity-card'>
+                <h4>{title_markup}</h4>
+                <div class='chair'>{chair}</div>
+                <div class='description'>
+                    <p>{description}</p>
+                    <p><strong>Topic relevance:</strong> {score:.2f}</p>
+                    {footer}
+                </div>
+            </div>
+            """
+        )
+    return "".join(cards)
 
 
 def split_into_sections(text):
@@ -1097,23 +1385,13 @@ async def search_theses(query: str = ""):
     try:
         resp = requests.get("https://api.srv.nat.tum.de/api/v1/ths/offer", timeout=5)
         all_theses = resp.json().get("hits", [])
-        thesis_data = "\n".join(
-            [
-                f"- {t.get('working_title_en')} ({t.get('supervisor', {}).get('orgs', [{}])[0].get('org_name_en')})"
-                for t in all_theses[:15]
-            ]
-        )
-        body = json.dumps(
-            {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 1000,
-                "messages": [{"role": "user", "content": f"Match: {query}\n\n{thesis_data}"}],
-                "system": "Return ONLY HTML content with <div class='opportunity-card'>. No intro.",
-            }
-        )
-        response = brt.invoke_model(modelId="anthropic.claude-3-haiku-20240307-v1:0", body=body)
-        res = json.loads(response.get("body").read())
-        return {"recommendations": res["content"][0]["text"]}
+        ranked = rank_postings_by_topic(query, all_theses, limit=12)
+        return {
+            "recommendations": render_postings_html(
+                ranked,
+                "No thesis topics matched your current topic request.",
+            )
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -1123,23 +1401,13 @@ async def search_jobs(query: str = ""):
     try:
         resp = requests.get("https://api.srv.nat.tum.de/api/v1/ths/offer", timeout=5)
         all_theses = resp.json().get("hits", [])
-        thesis_data = "\n".join(
-            [
-                f"- {t.get('working_title_en')} ({t.get('supervisor', {}).get('orgs', [{}])[0].get('org_name_en')})"
-                for t in all_theses[:20]
-            ]
-        )
-        body = json.dumps(
-            {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 1000,
-                "messages": [{"role": "user", "content": f"Match: {query}\n\n{thesis_data}"}],
-                "system": "Return ONLY HTML content with <div class='opportunity-card'>. No intro.",
-            }
-        )
-        response = brt.invoke_model(modelId="anthropic.claude-3-haiku-20240307-v1:0", body=body)
-        res = json.loads(response.get("body").read())
-        return {"recommendations": res["content"][0]["text"]}
+        ranked = rank_postings_by_topic(query, all_theses, limit=12)
+        return {
+            "recommendations": render_postings_html(
+                ranked,
+                "No research or HiWi postings matched your current topic request.",
+            )
+        }
     except Exception as e:
         return {"error": str(e)}
 

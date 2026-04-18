@@ -1,1 +1,37 @@
-[]
+[
+  {
+    "courseName": "Einführung in die Informatik",
+    "grade": 2.0,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Grundlagenpraktikum: Programmierung",
+    "grade": 3.0,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Einführung in die Wirtschaftsinformatik",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Financial Accounting",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Diskrete Strukturen",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  }
+]

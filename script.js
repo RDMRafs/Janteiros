@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const homeScreen = document.getElementById('home-screen');
+    const homeTrigger = document.getElementById('home-trigger');
+    const homeNavBtn = document.getElementById('home-nav-btn');
+    const featureLaunchBtns = document.querySelectorAll('.feature-launch');
     const navBtns = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -383,18 +387,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    navBtns.forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const tabId = btn.getAttribute('data-tab');
-            navBtns.forEach((button) => button.classList.remove('active'));
-            tabContents.forEach((content) => content.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(`${tabId}-tab`)?.classList.add('active');
+    function showHome() {
+        homeScreen?.classList.add('active');
+        tabContents.forEach((content) => content.classList.remove('active'));
+        navBtns.forEach((button) => button.classList.remove('active'));
+        homeNavBtn?.classList.add('active');
+    }
 
-            if (tabId === 'history') loadHistory();
-            if (tabId === 'cv-intelligence') loadCvProfile();
-        });
+    function openFeature(tabId) {
+        if (!tabId) return;
+        homeScreen?.classList.remove('active');
+        navBtns.forEach((button) => button.classList.remove('active'));
+        tabContents.forEach((content) => content.classList.remove('active'));
+        document.querySelector(`.nav-btn[data-tab="${tabId}"]`)?.classList.add('active');
+        document.getElementById(`${tabId}-tab`)?.classList.add('active');
+
+        if (tabId === 'history') loadHistory();
+        if (tabId === 'cv-intelligence') loadCvProfile();
+    }
+
+    navBtns.forEach((btn) => {
+        const tabId = btn.getAttribute('data-tab');
+        if (!tabId) return;
+        btn.addEventListener('click', () => openFeature(tabId));
     });
+
+    featureLaunchBtns.forEach((btn) => {
+        btn.addEventListener('click', () => openFeature(btn.getAttribute('data-target-tab')));
+    });
+
+    homeNavBtn?.addEventListener('click', showHome);
+    homeTrigger?.addEventListener('click', showHome);
 
     dropZone?.addEventListener('click', () => handbookInput?.click());
     handbookInput?.addEventListener('change', updatePlannerUploadState);
@@ -612,4 +635,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
     loadCvProfile();
     loadPlannerSession();
+    showHome();
 });

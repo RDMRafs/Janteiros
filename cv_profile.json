@@ -1,0 +1,36 @@
+{
+  "fileName": "Lebenslauf abertura euro.pdf",
+  "rawText": "Persönliche Infos\nPlievierpark 16\n81737 München\nDeutschland\n+49 163 1774875\nrafacurih@gmail.com\n16.09.2004 in São Paulo,\nBrasilien\nFähigkeiten\nfleißig\nteamfähig\nkreativ\nkommunikativ\ngeduldig\nÜber mich\nEDV-Kenntnisse: Gute Kenntnisse in\nWord, PowerPoint und Excel. Gute\nKenntnisse in Java und\nGrundkenntnisse in Python.\nSprachkenntnisse: Hervorragende\nKenntnisse in Portugiesisch, Deutsch\nund Englisch; Durchschnittliche\nKenntnisse in Spanisch.\nZertiﬁkate: Englisch: Cambridge First\nCertiﬁcate in English (B2); Deutsch:\nDSD II (C1), Abitur; Spanisch: DELE\n(B2); Mathematik: Känguru der\nMathematik 2020, 2021 und 2022;\nLobende Erwähnung in der ONC\n(Nationale Brasilianische\nWissenschaftsolympiade).\nAusbildung\nTUM (Technische Universität München)\n2024 - Heute\nBachelor\nWirtschaftsinformatik\nUSP (Universität von São Paulo)\n2023 - 2023\nBachelor\n1 Semester Betriebswirtschaftslehre\nErfahrung\n2018 - Heute\nFreiwilige Arbeit \"Família acolhedora\"\nFreiwilige Arbeit zur Betreuung von Babys und Kindern, was\nzu meiner Reife beigetragen hat\n2018 - 2018\nFuβballmeisterschaften in Europa gespielt\nEinzige in das Team, der Englisch sprach, musste die\nVerantwortung in unvorhergesehenen Situationen\nübernehmen\n2021 - 2021\nLobende Erwähnung an POSMUN\nLobende Erwähnung bei POSMUN (UN-Simulation) als\nDelegierter, aufgrund meiner klaren und überzeugenden\nKommunikationsweise\n2022 - 2022\nMonitoring für Grundschule Kinder\nErfahrung, die mir geholfen hat, eine bessere Organisation\nund eine verbesserte Art zu haben, Ideen zu erklären.\n2023 - 2023\nFreiwilligenarbeit im Senegal\nFreiwilligenarbeit mit Straßenkindern, bei der ich im Team\ngearbeitet habe, um die Schule der Kinder zu renovieren\nRafael Curi Hilsenrath\nLebenslauf\nSeite 1",
+  "structuredProfile": {
+    "name": "Persönliche Infos",
+    "education": [],
+    "workExperience": [],
+    "projects": [],
+    "skills": [],
+    "toolsAndTechnologies": [
+      "ai",
+      "c",
+      "excel",
+      "java",
+      "llm",
+      "os",
+      "python"
+    ],
+    "certifications": [],
+    "languages": [],
+    "contact": {
+      "emails": [
+        "rafacurih@gmail.com"
+      ],
+      "urls": [],
+      "phones": [
+        "+49 163 1774875",
+        "16.09.2004",
+        "2018 - 2018",
+        "2021 - 2021",
+        "2022 - 2022",
+        "2023 - 2023"
+      ]
+    }
+  }
+}

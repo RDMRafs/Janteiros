@@ -16,7 +16,7 @@
 
     <div class="app-container">
         <header class="glass-header">
-            <div class="logo-area">
+            <div class="logo-area home-trigger" id="home-trigger">
                 <div class="logo-icon">🎓</div>
                 <div class="logo-text">
                     <h1>AcademicAI</h1>
@@ -24,7 +24,8 @@
                 </div>
             </div>
             <nav class="main-nav">
-                <button class="nav-btn active" data-tab="planner">Semester Planner</button>
+                <button class="nav-btn home-nav-btn" id="home-nav-btn">Home</button>
+                <button class="nav-btn" data-tab="planner">Semester Planner</button>
                 <button class="nav-btn" data-tab="cv-intelligence">CV Intelligence</button>
                 <button class="nav-btn" data-tab="theses">Thesis Finder</button>
                 <button class="nav-btn" data-tab="jobs">Research & HiWi</button>
@@ -33,7 +34,47 @@
         </header>
 
         <main class="content-area">
-            <section id="planner-tab" class="tab-content active">
+            <section id="home-screen" class="home-screen active">
+                <div class="home-hero glass-panel">
+                    <p class="home-eyebrow">AcademicAI Platform</p>
+                    <h2>One place to plan semesters, discover opportunities, and turn study progress into career momentum.</h2>
+                    <p class="home-subtitle">Navigate TUM coursework, explore thesis and HiWi topics, track your academic profile, and improve your CV with a polished hackathon-ready student copilot.</p>
+                </div>
+
+                <div class="home-grid">
+                    <button class="feature-card glass-panel feature-launch" data-target-tab="planner">
+                        <span class="feature-kicker">Planning</span>
+                        <h3>Semester Planner</h3>
+                        <p>Upload a handbook, ask questions about your program, and build semester recommendations with follow-up support.</p>
+                    </button>
+
+                    <button class="feature-card glass-panel feature-launch" data-target-tab="theses">
+                        <span class="feature-kicker">Discovery</span>
+                        <h3>Thesis Finder</h3>
+                        <p>Search thesis opportunities by topic and browse deduplicated, relevance-ranked research directions.</p>
+                    </button>
+
+                    <button class="feature-card glass-panel feature-launch" data-target-tab="jobs">
+                        <span class="feature-kicker">Opportunities</span>
+                        <h3>Research & HiWi</h3>
+                        <p>Find student assistant and research roles aligned with your interests across current institute postings.</p>
+                    </button>
+
+                    <button class="feature-card glass-panel feature-launch" data-target-tab="cv-intelligence">
+                        <span class="feature-kicker">Career</span>
+                        <h3>CV Intelligence</h3>
+                        <p>Compare your CV against coursework and academic context to uncover strengths, gaps, and next steps.</p>
+                    </button>
+
+                    <button class="feature-card glass-panel feature-launch" data-target-tab="history">
+                        <span class="feature-kicker">Profile</span>
+                        <h3>Academic Profile</h3>
+                        <p>Track completed modules, grades, ECTS, and categories so the rest of the platform can personalize guidance.</p>
+                    </button>
+                </div>
+            </section>
+
+            <section id="planner-tab" class="tab-content">
                 <div class="grid-layout">
                     <div id="input-panel" class="glass-panel">
                         <h2>Plan Your Semester</h2>
