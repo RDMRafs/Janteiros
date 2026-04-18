@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TUM AI Semester Planner & Thesis Finder</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo-section">
+                <div class="logo-icon">🎓</div>
+                <h1>TUM <span>Agentic Planner</span></h1>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-btn active" data-tab="planner">Semester Planner</button>
+                <button class="nav-btn" data-tab="theses">Thesis Finder</button>
+                <button class="nav-btn" data-tab="jobs">Research & HiWi</button>
+                <button class="nav-btn" data-tab="history">Course History</button>
+            </nav>
+        </header>
+
+        <main class="content-grid">
+            <!-- TAB 1: PLANNER -->
+            <section id="planner-tab" class="tab-content active">
+                <div class="grid-layout">
+                    <section class="input-panel glass-panel" id="input-panel">
+                        <h2>Build Your Semester</h2>
+                        <form id="planner-form">
+                            <div class="form-group">
+                                <label for="handbook">Course Handbook (PDF)</label>
+                                <div class="file-upload-box">
+                                    <input type="file" id="handbook" accept=".pdf" required>
+                                    <div class="upload-content">
+                                        <span class="upload-icon">📄</span>
+                                        <span class="upload-text">Upload Handbook PDF</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="prompt">What are your goals?</label>
+                                <textarea id="prompt" placeholder="e.g. I want to take 30 ECTS including Machine Learning, with no classes on Fridays." required></textarea>
+                            </div>
+                            <button type="submit" id="generate-btn" class="btn-primary">
+                                <span>Process & Plan</span>
+                                <div class="loader"></div>
+                            </button>
+                        </form>
+                    </section>
+
+                    <section class="output-panel glass-panel hidden" id="output-panel">
+                        <div id="agent-status" class="agent-status">
+                            <div class="agent-avatar">🤖</div>
+                            <div class="status-info">
+                                <span class="status-label">Agent Thinking...</span>
+                                <div class="progress-bar"><div class="progress-fill"></div></div>
+                                <p class="status-text">Analyzing handbook and fetching live TUM schedules...</p>
+                            </div>
+                        </div>
+
+                        <div id="results-content" class="results-content hidden">
+                            <div class="result-section">
+                                <h3>Optimized Schedule</h3>
+                                <div id="schedule-container" class="schedule-grid"></div>
+                            </div>
+                            <div class="result-section">
+                                <h3>Agent Rationale</h3>
+                                <p id="rationale-text"></p>
+                            </div>
+                            <div class="result-section">
+                                <h3>Alternative Options</h3>
+                                <ul id="alternatives-list"></ul>
+                            </div>
+                            <div class="result-section">
+                                <h3>Follow-up (Modify Plan)</h3>
+                                <textarea id="followup-prompt" rows="2" placeholder="e.g. Swap Machine Learning for Web Development"></textarea>
+                                <button id="followup-btn" class="btn-primary">Update Plan</button>
+                            </div>
+                            <div class="action-buttons" style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button id="accept-plan-btn" class="btn-primary" style="background: var(--success);">Accept & Save to History</button>
+                                <button id="reset-btn" class="btn-secondary">Start Over</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <!-- TAB 2: THESES -->
+            <section id="theses-tab" class="tab-content">
+                <div class="glass-panel">
+                    <h2>Bachelor & Master Thesis Finder</h2>
+                    <p>Search all live thesis offers from the TUM NAT API matched to your interests.</p>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <input type="text" id="thesis-query" placeholder="Enter your research interest (e.g. Quantum Computing, AI, Robotics)">
+                        <button id="search-theses-btn" class="btn-primary" style="margin-top: 10px;">Search Available Theses</button>
+                    </div>
+                    <div id="thesis-results" class="thesis-results-container" style="margin-top: 20px;">
+                        <!-- Results will be injected here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: HISTORY -->
+            <section id="history-tab" class="tab-content">
+                <div class="glass-panel">
+                    <h2>Your Course History</h2>
+                    <p>These courses are skipped during semester planning to avoid duplicates.</p>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <input type="text" id="new-history-course" placeholder="Enter Course Code (e.g. MA1001)">
+                        <button id="add-history-btn" class="btn-secondary" style="margin-top: 10px;">Add Completed Course</button>
+                    </div>
+                    <ul id="history-list" class="history-list" style="margin-top: 20px;">
+                        <!-- History injected here -->
+                    </ul>
+                </div>
+            </section>
+            <!-- TAB 2.5: JOBS -->
+            <section id="jobs-tab" class="tab-content">
+                <div class="glass-panel">
+                    <h2>Research & Student Assistant (HiWi) Finder</h2>
+                    <p>Find student assistant positions and research projects matched to your skills.</p>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <input type="text" id="job-query" placeholder="e.g. Python Developer, Lab Assistant, Data Analysis">
+                        <button id="search-jobs-btn" class="btn-primary" style="margin-top: 10px; background: var(--elective);">Search HiWi Opportunities</button>
+                    </div>
+                    <div id="job-results" class="thesis-results-container" style="margin-top: 20px;"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

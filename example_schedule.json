@@ -1,0 +1,19 @@
+{
+  "schedule": [
+    {
+      "course": "IN0001 - Introduction to Informatics 1",
+      "time_slot": "Monday 10:00 - 12:00",
+      "type": "mandatory"
+    },
+    {
+      "course": "IN0001 - Exercises (Übung)",
+      "time_slot": "Wednesday 14:00 - 16:00",
+      "type": "mandatory"
+    },
+    {
+      "course": "IN2062 - Machine Learning",
+      "time_slot": "Tuesday 08:00 - 10:00",
+      "type": "elective"
+    }
+  ]
+}
