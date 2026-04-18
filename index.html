@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TUM AI Semester Planner & Thesis Finder</title>
+    <title>Academic Life Cycle Assistant | TUM</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="dark-theme">
+<body>
     <div class="background-blobs">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
@@ -15,10 +15,13 @@
     </div>
 
     <div class="app-container">
-        <header class="app-header">
-            <div class="logo-section">
+        <header class="glass-header">
+            <div class="logo-area">
                 <div class="logo-icon">🎓</div>
-                <h1>TUM <span>Agentic Planner</span></h1>
+                <div class="logo-text">
+                    <h1>AcademicAI</h1>
+                    <span>TUM Life Cycle Assistant</span>
+                </div>
             </div>
             <nav class="main-nav">
                 <button class="nav-btn active" data-tab="planner">Semester Planner</button>
@@ -28,100 +31,95 @@
             </nav>
         </header>
 
-        <main class="content-grid">
+        <main class="content-area">
             <!-- TAB 1: PLANNER -->
             <section id="planner-tab" class="tab-content active">
                 <div class="grid-layout">
-                    <section class="input-panel glass-panel" id="input-panel">
-                        <h2>Build Your Semester</h2>
-                        <form id="planner-form">
-                            <div class="form-group">
-                                <label for="handbook">Course Handbook (PDF)</label>
-                                <div class="file-upload-box">
-                                    <input type="file" id="handbook" accept=".pdf" required>
-                                    <div class="upload-content">
-                                        <span class="upload-icon">📄</span>
-                                        <span class="upload-text">Upload Handbook PDF</span>
-                                    </div>
+                    <!-- Input Panel -->
+                    <div id="input-panel" class="glass-panel">
+                        <h2>Plan Your Semester</h2>
+                        <p>Upload your course handbook and tell the AI your academic goals.</p>
+                        
+                        <form id="planner-form" class="planner-form">
+                            <div class="upload-zone" id="drop-zone">
+                                <input type="file" id="handbook" accept=".pdf" hidden>
+                                <div class="upload-content" id="upload-status-area">
+                                    <span class="upload-icon" id="status-icon">📄</span>
+                                    <p id="status-text-display">Drop course handbook (PDF) or click to browse</p>
+                                    <span id="selected-file-name" style="display: block; margin-top: 10px; color: var(--primary); font-weight: bold; font-size: 0.9rem;"></span>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="prompt">What are your goals?</label>
-                                <textarea id="prompt" placeholder="e.g. I want to take 30 ECTS including Machine Learning, with no classes on Fridays." required></textarea>
-                            </div>
-                            <button type="submit" id="generate-btn" class="btn-primary">
-                                <span>Process & Plan</span>
-                                <div class="loader"></div>
-                            </button>
-                        </form>
-                    </section>
 
-                    <section class="output-panel glass-panel hidden" id="output-panel">
-                        <div id="agent-status" class="agent-status">
-                            <div class="agent-avatar">🤖</div>
-                            <div class="status-info">
-                                <span class="status-label">Agent Thinking...</span>
+                            <div class="form-group">
+                                <label for="prompt">What are your goals for this semester?</label>
+                                <textarea id="prompt" placeholder="e.g. I want to focus on Data Science and avoid Fridays. Max 20 ECTS."></textarea>
+                            </div>
+
+                            <button type="submit" id="generate-btn" class="btn-primary">Generate Smart Plan</button>
+                        </form>
+                    </div>
+
+                    <!-- Output Panel -->
+                    <div id="output-panel" class="glass-panel hidden">
+                        <div id="agent-status" class="agent-status hidden">
+                            <div class="spinner"></div>
+                            <div class="status-content">
+                                <p class="status-text">Analyzing handbook...</p>
                                 <div class="progress-bar"><div class="progress-fill"></div></div>
-                                <p class="status-text">Analyzing handbook and fetching live TUM schedules...</p>
                             </div>
                         </div>
 
                         <div id="results-content" class="results-content hidden">
-                            <div class="result-section">
-                                <h3>Optimized Schedule</h3>
-                                <div id="schedule-container" class="schedule-grid"></div>
+                            <div class="results-header glass-panel" style="margin-bottom: 25px; border-color: var(--primary-glow);">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h3 style="color: var(--primary); font-size: 1.5rem;">Optimized Schedule</h3>
+                                        <p style="color: var(--text-dim); font-size: 0.9rem;">Review and accept your new academic path.</p>
+                                    </div>
+                                    <div class="actions" style="display: flex; gap: 10px;">
+                                        <button id="reset-btn" class="btn-secondary" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px 20px; border-radius: 12px; cursor: pointer;">Discard</button>
+                                        <button id="accept-plan-btn" class="btn-primary" style="box-shadow: 0 0 20px var(--primary-glow);">Accept & Save Plan</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="result-section">
-                                <h3>Agent Rationale</h3>
-                                <p id="rationale-text"></p>
+
+                            <div id="schedule-container" class="schedule-grid">
+                                <!-- Cards generated here -->
                             </div>
-                            <div class="result-section">
-                                <h3>Alternative Options</h3>
-                                <ul id="alternatives-list"></ul>
-                            </div>
-                            <div class="result-section">
-                                <h3>Follow-up (Modify Plan)</h3>
-                                <textarea id="followup-prompt" rows="2" placeholder="e.g. Swap Machine Learning for Web Development"></textarea>
-                                <button id="followup-btn" class="btn-primary">Update Plan</button>
-                            </div>
-                            <div class="action-buttons" style="display: flex; gap: 10px; margin-top: 20px;">
-                                <button id="accept-plan-btn" class="btn-primary" style="background: var(--success);">Accept & Save to History</button>
-                                <button id="reset-btn" class="btn-secondary">Start Over</button>
+
+                            <div class="rationale-section glass-panel" style="margin-top: 30px;">
+                                <h4 style="color: var(--elective); margin-bottom: 15px;">AI Rationale</h4>
+                                <div id="rationale-text"></div>
+                                
+                                <div id="followup-area" style="margin-top: 25px; border-top: 1px solid var(--glass-border); padding-top: 20px;">
+                                    <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;">Have questions about this plan?</p>
+                                    <div style="display: flex; gap: 10px;">
+                                        <input type="text" id="followup-input" placeholder="e.g. Can I swap the Tuesday module?" style="flex: 1;">
+                                        <button id="followup-btn" class="btn-primary" style="width: auto; padding: 0 20px;">Ask AI</button>
+                                    </div>
+                                    <div id="followup-response" style="margin-top: 15px; font-size: 0.95rem; color: var(--text-main);"></div>
+                                </div>
                             </div>
                         </div>
-                    </section>
+                    </div>
                 </div>
             </section>
 
             <!-- TAB 2: THESES -->
             <section id="theses-tab" class="tab-content">
                 <div class="glass-panel">
-                    <h2>Bachelor & Master Thesis Finder</h2>
-                    <p>Search all live thesis offers from the TUM NAT API matched to your interests.</p>
+                    <h2>Thesis Finder</h2>
+                    <p>Search live Bachelor/Master thesis offers from the TUM School of Natural Sciences.</p>
                     <div class="form-group" style="margin-top: 20px;">
-                        <input type="text" id="thesis-query" placeholder="Enter your research interest (e.g. Quantum Computing, AI, Robotics)">
-                        <button id="search-theses-btn" class="btn-primary" style="margin-top: 10px;">Search Available Theses</button>
+                        <input type="text" id="thesis-query" placeholder="Enter research interests (e.g. Machine Learning, Physics)...">
+                        <button id="search-theses-btn" class="btn-primary" style="margin-top: 10px;">Find Thesis Topics</button>
                     </div>
-                    <div id="thesis-results" class="thesis-results-container" style="margin-top: 20px;">
-                        <!-- Results will be injected here -->
+                    <div id="thesis-results" class="thesis-results-container">
+                        <!-- Results will appear here -->
                     </div>
                 </div>
             </section>
 
-            <!-- TAB 3: HISTORY -->
-            <section id="history-tab" class="tab-content">
-                <div class="glass-panel">
-                    <h2>Your Course History</h2>
-                    <p>These courses are skipped during semester planning to avoid duplicates.</p>
-                    <div class="form-group" style="margin-top: 20px;">
-                        <input type="text" id="new-history-course" placeholder="Enter Course Code (e.g. MA1001)">
-                        <button id="add-history-btn" class="btn-secondary" style="margin-top: 10px;">Add Completed Course</button>
-                    </div>
-                    <ul id="history-list" class="history-list" style="margin-top: 20px;">
-                        <!-- History injected here -->
-                    </ul>
-                </div>
-            </section>
             <!-- TAB 2.5: JOBS -->
             <section id="jobs-tab" class="tab-content">
                 <div class="glass-panel">
@@ -132,6 +130,23 @@
                         <button id="search-jobs-btn" class="btn-primary" style="margin-top: 10px; background: var(--elective);">Search HiWi Opportunities</button>
                     </div>
                     <div id="job-results" class="thesis-results-container" style="margin-top: 20px;"></div>
+                </div>
+            </section>
+
+            <section id="history-tab" class="tab-content">
+                <div class="glass-panel">
+                    <h2>Course History</h2>
+                    <div class="gpa-banner glass-panel" style="margin-bottom: 20px; text-align: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                        <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Average Grade</p>
+                        <h1 id="gpa-value" style="color: var(--primary); margin: 0; font-size: 2.5rem;">0.00</h1>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="new-history-course" placeholder="Enter course name..." style="flex: 1;">
+                        <button id="add-history-btn" class="btn-primary" style="width: 120px;">Add</button>
+                    </div>
+                    <ul id="history-list" class="history-list">
+                        <!-- Items with editable grades will be here -->
+                    </ul>
                 </div>
             </section>
         </main>

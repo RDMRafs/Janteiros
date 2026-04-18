@@ -1,190 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Tab Switching Logic
+    // Selectors
     const navBtns = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
-
-    navBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tabId = btn.getAttribute('data-tab');
-            navBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(`${tabId}-tab`).classList.add('active');
-            if(tabId === 'history') loadHistory();
-        });
-    });
-
-    // Planner Logic
-    const form = document.getElementById('planner-form');
+    
+    const plannerForm = document.getElementById('planner-form');
+    const handbookInput = document.getElementById('handbook');
+    const promptInput = document.getElementById('prompt');
     const generateBtn = document.getElementById('generate-btn');
     const outputPanel = document.getElementById('output-panel');
     const inputPanel = document.getElementById('input-panel');
     const agentStatus = document.getElementById('agent-status');
     const resultsContent = document.getElementById('results-content');
-    const progressFill = document.querySelector('.progress-fill');
-    const statusText = document.querySelector('.status-text');
     const scheduleContainer = document.getElementById('schedule-container');
     const rationaleText = document.getElementById('rationale-text');
-    const alternativesList = document.getElementById('alternatives-list');
     const resetBtn = document.getElementById('reset-btn');
     const acceptPlanBtn = document.getElementById('accept-plan-btn');
+
     const followupBtn = document.getElementById('followup-btn');
-    const followupPrompt = document.getElementById('followup-prompt');
+    const followupInput = document.getElementById('followup-input');
+    const followupResponse = document.getElementById('followup-response');
 
-    let currentSchedule = [];
-
-    // File upload visual feedback
-    const fileInput = document.getElementById('handbook');
-    const uploadText = document.querySelector('.upload-text');
-    const uploadIcon = document.querySelector('.upload-icon');
-
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) {
-            uploadText.textContent = fileInput.files[0].name;
-            uploadIcon.textContent = '✅';
-        }
-    });
-
-    // Load history on startup
-    loadHistory();
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        startPlanning(document.getElementById('prompt').value);
-    });
-
-    followupBtn.addEventListener('click', () => {
-        startPlanning(followupPrompt.value);
-    });
-
-    async function startPlanning(userPrompt) {
-        if (!fileInput.files[0]) {
-            alert("Please upload a handbook PDF first.");
-            return;
-        }
-
-        generateBtn.disabled = true;
-        generateBtn.classList.add('loading');
-        followupBtn.disabled = true;
-        
-        outputPanel.classList.remove('hidden');
-        resultsContent.classList.add('hidden');
-        agentStatus.classList.remove('hidden');
-
-        updateProgress(20, "Analyzing handbook PDF...");
-
-        const formData = new FormData();
-        formData.append('prompt', userPrompt);
-        formData.append('handbook', fileInput.files[0]);
-
-        try {
-            updateProgress(50, "Fetching live TUM schedules & resolving conflicts...");
-            const response = await fetch('http://localhost:8000/plan', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-            
-            if (data.error) {
-                alert("AI Error: " + data.error);
-                resetAgentState();
-                return;
-            }
-
-            updateProgress(100, "Finalizing plan...");
-            setTimeout(() => renderOutput(data), 500);
-        } catch (error) {
-            console.error(error);
-            alert("Error connecting to backend. Make sure it is running.");
-            resetAgentState();
-        }
-    }
-
-    function renderOutput(data) {
-        agentStatus.classList.add('hidden');
-        resultsContent.classList.remove('hidden');
-        inputPanel.classList.add('hidden');
-        outputPanel.classList.add('full-width');
-        
-        scheduleContainer.innerHTML = '';
-        currentSchedule = data.schedule || [];
-        
-        currentSchedule.forEach(item => {
-            const card = document.createElement('div');
-            card.className = `schedule-card ${item.type || 'mandatory'}`;
-            card.innerHTML = `
-                <h4>${item.course}</h4>
-                <p>${item.time_slot}</p>
-                <span class="badge">${item.type || 'Course'}</span>
-            `;
-            scheduleContainer.appendChild(card);
-        });
-
-        rationaleText.innerHTML = data.rationale || "Plan generated successfully.";
-        
-        alternativesList.innerHTML = '';
-        if (data.alternatives && data.alternatives.length > 0) {
-            data.alternatives.forEach(alt => {
-                const li = document.createElement('li');
-                li.textContent = alt;
-                alternativesList.appendChild(li);
-            });
-        } else {
-            alternativesList.innerHTML = '<li>No alternatives provided.</li>';
-        }
-
-        generateBtn.classList.remove('loading');
-        generateBtn.disabled = false;
-        followupBtn.disabled = false;
-        outputPanel.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function updateProgress(percent, text) {
-        progressFill.style.width = `${percent}%`;
-        statusText.textContent = text;
-    }
-
-    function resetAgentState() {
-        outputPanel.classList.add('hidden');
-        outputPanel.classList.remove('full-width');
-        inputPanel.classList.remove('hidden');
-        generateBtn.classList.remove('loading');
-        generateBtn.disabled = false;
-    }
-
-    resetBtn.addEventListener('click', () => {
-        form.reset();
-        resetAgentState();
-        uploadText.textContent = 'Upload Handbook PDF';
-        uploadIcon.textContent = '📄';
-    });
-
-    acceptPlanBtn.addEventListener('click', async () => {
-        if (currentSchedule.length === 0) return;
-
-        acceptPlanBtn.disabled = true;
-        acceptPlanBtn.textContent = "Saving to History...";
-        
-        try {
-            for (const item of currentSchedule) {
-                const fd = new FormData();
-                fd.append('course', item.course);
-                await fetch('http://localhost:8000/history/add', { method: 'POST', body: fd });
-            }
-            alert("Success! All modules from this plan have been saved to your Course History.");
-            loadHistory(); // Refresh history list
-            // Switch to history tab
-            navBtns[2].click(); 
-        } catch (e) {
-            alert("Error saving history.");
-        } finally {
-            acceptPlanBtn.textContent = "Accept & Save to History";
-            acceptPlanBtn.disabled = false;
-        }
-    });
-
-    // THESIS FINDER LOGIC
     const searchThesesBtn = document.getElementById('search-theses-btn');
     const thesisQueryInput = document.getElementById('thesis-query');
     const thesisResults = document.getElementById('thesis-results');
@@ -193,85 +28,197 @@ document.addEventListener('DOMContentLoaded', () => {
     const jobQueryInput = document.getElementById('job-query');
     const jobResults = document.getElementById('job-results');
 
-    searchJobsBtn.addEventListener('click', async () => {
-        const query = jobQueryInput.value.trim();
-        if (!query) return;
-        searchJobsBtn.disabled = true;
-        searchJobsBtn.textContent = "Searching HiWi Roles...";
-        jobResults.innerHTML = '<p class="status-text">Scanning Department Research Boards...</p>';
-        try {
-            const response = await fetch(`http://localhost:8000/jobs?query=${encodeURIComponent(query)}`);
-            const data = await response.json();
-            jobResults.innerHTML = `<div class="thesis-recommendations glass-panel" style="margin-top:20px;">${data.recommendations}</div>`;
-        } catch (e) {
-            jobResults.innerHTML = '<p>Error fetching jobs.</p>';
-        } finally {
-            searchJobsBtn.disabled = false;
-            searchJobsBtn.textContent = "Search HiWi Opportunities";
-        }
-    });
-
-    searchThesesBtn.addEventListener('click', async () => {
-        const query = thesisQueryInput.value.trim();
-        if (!query) return;
-
-        searchThesesBtn.disabled = true;
-        searchThesesBtn.textContent = "Matching with AI...";
-        thesisResults.innerHTML = '<p class="status-text">Searching TUM NAT API and analyzing relevance...</p>';
-
-        try {
-            const response = await fetch(`http://localhost:8000/theses?query=${encodeURIComponent(query)}`);
-            const data = await response.json();
-            thesisResults.innerHTML = `<div class="thesis-recommendations glass-panel" style="margin-top:20px;">${data.recommendations}</div>`;
-        } catch (e) {
-            thesisResults.innerHTML = '<p>Error fetching theses.</p>';
-        } finally {
-            searchThesesBtn.disabled = false;
-            searchThesesBtn.textContent = "Search Available Theses";
-        }
-    });
-
-    // HISTORY LOGIC
     const addHistoryBtn = document.getElementById('add-history-btn');
     const newCourseInput = document.getElementById('new-history-course');
     const historyList = document.getElementById('history-list');
+    const gpaValue = document.getElementById('gpa-value');
 
-    async function loadHistory() {
+    const dropZone = document.getElementById('drop-zone');
+    const selectedFileName = document.getElementById('selected-file-name');
+    const statusIcon = document.getElementById('status-icon');
+    const statusTextDisplay = document.getElementById('status-text-display');
+
+    let currentPlanData = ""; // Store for followup context
+
+    // Tab Switching
+    navBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.getAttribute('data-tab');
+            navBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            const targetTab = document.getElementById(`${tabId}-tab`);
+            if (targetTab) targetTab.classList.add('active');
+            if(tabId === 'history') loadHistory();
+        });
+    });
+
+    // File Upload Feedback
+    dropZone?.addEventListener('click', () => handbookInput?.click());
+    handbookInput?.addEventListener('change', () => {
+        if (handbookInput.files.length > 0) {
+            selectedFileName.textContent = `Selected: ${handbookInput.files[0].name}`;
+            statusIcon.textContent = "✅";
+            statusTextDisplay.textContent = "Handbook loaded!";
+            dropZone.style.borderColor = "var(--primary)";
+        }
+    });
+
+    // Planner Execution
+    plannerForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!handbookInput.files[0]) return alert("Please upload a handbook!");
+        
+        generateBtn.disabled = true;
+        outputPanel.classList.remove('hidden');
+        resultsContent.classList.add('hidden');
+        agentStatus.classList.remove('hidden');
+
+        const formData = new FormData();
+        formData.append('prompt', promptInput.value);
+        formData.append('handbook', handbookInput.files[0]);
+
         try {
-            const resp = await fetch('http://localhost:8000/history');
+            const resp = await fetch('/plan', { method: 'POST', body: formData });
             const data = await resp.json();
-            renderHistory(data.completed_courses || []);
+            
+            agentStatus.classList.add('hidden');
+            resultsContent.classList.remove('hidden');
+            inputPanel.classList.add('hidden');
+            outputPanel.classList.add('full-width');
+            
+            currentPlanData = JSON.stringify(data.schedule);
+            scheduleContainer.innerHTML = '';
+            (data.schedule || []).forEach(item => {
+                const div = document.createElement('div');
+                div.className = `schedule-card ${item.type || 'mandatory'}`;
+                div.innerHTML = `
+                    <h4 style="color: white; font-size: 1.1rem; margin-bottom: 5px; font-weight: 700;">${item.course}</h4>
+                    <p style="color: var(--text-dim); font-size: 0.85rem;">${item.time_slot}</p>
+                    <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: ${item.type === 'mandatory' ? 'var(--primary)' : 'var(--elective)'}">${item.type}</span>
+                `;
+                scheduleContainer.appendChild(div);
+            });
+            rationaleText.innerHTML = data.rationale || "";
         } catch (e) {
-            console.error("Failed to load history");
+            alert("Error generating plan.");
+            resetAgentState();
+        } finally {
+            generateBtn.disabled = false;
         }
-    }
+    });
 
-    function renderHistory(courses) {
-        historyList.innerHTML = '';
-        if (courses.length === 0) {
-            historyList.innerHTML = '<p style="padding: 20px; color: var(--text-dim);">No courses completed yet.</p>';
-            return;
+    // Follow-up Logic
+    followupBtn?.addEventListener('click', async () => {
+        const question = followupInput.value.trim();
+        if (!question) return;
+
+        followupBtn.disabled = true;
+        followupResponse.innerHTML = "<p style='color: var(--text-dim);'>AI is thinking...</p>";
+
+        const fd = new FormData();
+        fd.append('question', question);
+        fd.append('current_plan', currentPlanData);
+
+        try {
+            const resp = await fetch('/plan/followup', { method: 'POST', body: fd });
+            const data = await resp.json();
+            followupResponse.innerHTML = data.answer || "No response.";
+        } catch (e) {
+            followupResponse.innerHTML = "Error connecting to AI.";
+        } finally {
+            followupBtn.disabled = false;
+            followupInput.value = "";
         }
-        courses.forEach(c => {
+    });
+
+    // History Logic
+    async function loadHistory() {
+        const resp = await fetch('/history');
+        const data = await resp.json();
+        historyList.innerHTML = '';
+        let total = 0, count = 0;
+
+        (data.completed_courses || []).forEach(item => {
             const li = document.createElement('li');
-            li.className = 'history-item';
-            li.innerHTML = `<span>${c}</span> <span class="badge completed">Completed</span>`;
+            li.className = 'history-item glass-panel';
+            li.style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 15px;";
+            li.innerHTML = `
+                <div style="flex: 2;"><strong style="color: white;">${item.course}</strong></div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <input type="number" class="grade-edit" data-course="${item.course}" value="${item.grade || ''}" 
+                        step="0.1" min="1.0" max="5.0" placeholder="Note" 
+                        style="width: 70px; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: var(--primary); text-align: center; border-radius: 8px;">
+                    <button class="btn-delete" data-course="${item.course}" style="background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.2); color: #ff4444; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Delete</button>
+                </div>
+            `;
             historyList.appendChild(li);
+            if (item.grade && parseFloat(item.grade) > 0) { total += parseFloat(item.grade); count++; }
+        });
+        gpaValue.textContent = count > 0 ? (total / count).toFixed(2) : "0.00";
+
+        document.querySelectorAll('.grade-edit').forEach(inp => {
+            inp.addEventListener('change', async () => {
+                const fd = new FormData();
+                fd.append('course', inp.getAttribute('data-course'));
+                fd.append('grade', parseFloat(inp.value) || 0);
+                await fetch('/history/update_grade', { method: 'POST', body: fd });
+                loadHistory();
+            });
+        });
+
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const fd = new FormData();
+                fd.append('course', btn.getAttribute('data-course'));
+                await fetch('/history/delete', { method: 'POST', body: fd });
+                loadHistory();
+            });
         });
     }
 
-    addHistoryBtn.addEventListener('click', async () => {
-        const course = newCourseInput.value.trim();
-        if(!course) return;
-        
+    addHistoryBtn?.addEventListener('click', async () => {
+        if (!newCourseInput.value.trim()) return;
         const fd = new FormData();
-        fd.append('course', course);
-        try {
-            await fetch('http://localhost:8000/history/add', { method: 'POST', body: fd });
-            newCourseInput.value = '';
-            loadHistory();
-        } catch (e) {
-            alert("Error adding to history");
-        }
+        fd.append('course', newCourseInput.value);
+        fd.append('grade', 0.0);
+        await fetch('/history/add', { method: 'POST', body: fd });
+        newCourseInput.value = '';
+        loadHistory();
     });
+
+    acceptPlanBtn?.addEventListener('click', async () => {
+        const cards = document.querySelectorAll('.schedule-card h4');
+        for (let h4 of cards) {
+            const fd = new FormData();
+            fd.append('course', h4.textContent);
+            fd.append('grade', 0.0);
+            await fetch('/history/add', { method: 'POST', body: fd });
+        }
+        alert("Plan saved! Check History tab to add grades.");
+        loadHistory();
+    });
+
+    // Opportunities Search
+    const handleSearch = async (btn, input, results, url) => {
+        const query = input.value.trim();
+        btn.disabled = true; btn.textContent = "Searching...";
+        results.innerHTML = '<p style="text-align: center; color: var(--text-dim);">Scanning live TUM data...</p>';
+        try {
+            const resp = await fetch(`${url}?query=${encodeURIComponent(query)}`);
+            const data = await resp.json();
+            results.innerHTML = data.recommendations || "No matches.";
+        } catch (e) { results.innerHTML = "<p>Error.</p>"; }
+        finally { btn.disabled = false; btn.textContent = btn.id.includes('theses') ? "Find Thesis Topics" : "Search HiWi Opportunities"; }
+    };
+
+    searchThesesBtn?.addEventListener('click', () => handleSearch(searchThesesBtn, thesisQueryInput, thesisResults, '/theses'));
+    searchJobsBtn?.addEventListener('click', () => handleSearch(searchJobsBtn, jobQueryInput, jobResults, '/jobs'));
+
+    function resetAgentState() {
+        outputPanel.classList.add('hidden');
+        inputPanel.classList.remove('hidden');
+        outputPanel.classList.remove('full-width');
+    }
+    resetBtn?.addEventListener('click', resetAgentState);
 });
