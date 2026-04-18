@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const ACTION_CENTER_STORAGE_KEY = 'academicaiActionCenterState';
+    const FEATURE_STATE_STORAGE_KEY = 'academicaiFeatureOutputs';
+
     const homeScreen = document.getElementById('home-screen');
     const homeTrigger = document.getElementById('home-trigger');
-    const homeNavBtn = document.getElementById('home-nav-btn');
     const featureLaunchBtns = document.querySelectorAll('.feature-launch');
     const navBtns = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -64,12 +66,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const cvAnalysisStatus = document.getElementById('cv-analysis-status');
     const cvAnalysisResults = document.getElementById('cv-analysis-results');
 
+    const actionSummaryGrid = document.getElementById('action-summary-grid');
+    const actionEmptyState = document.getElementById('action-empty-state');
+    const actionList = document.getElementById('action-list');
+
     let currentPlanData = '';
     let currentCvProfile = null;
     let plannerSessionId = localStorage.getItem('academicaiPlannerSessionId') || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     let plannerState = null;
+    let currentHistory = [];
+    let actionDataRevision = 0;
+    let dismissedActionRevision = {};
+
+    const storedFeatureState = loadStoredJson(FEATURE_STATE_STORAGE_KEY) || {};
+    let latestCvAnalysis = storedFeatureState.cvAnalysis || null;
+    let latestThesisResults = storedFeatureState.theses || { query: '', items: [] };
+    let latestJobResults = storedFeatureState.jobs || { query: '', items: [] };
+    let actionStatusState = loadStoredJson(ACTION_CENTER_STORAGE_KEY) || {};
+    Object.keys(actionStatusState).forEach((actionId) => {
+        if (actionStatusState[actionId] === 'dismissed') {
+            delete actionStatusState[actionId];
+        }
+    });
+    saveStoredJson(ACTION_CENTER_STORAGE_KEY, actionStatusState);
 
     localStorage.setItem('academicaiPlannerSessionId', plannerSessionId);
+
+    function loadStoredJson(key) {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function saveStoredJson(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function persistFeatureState() {
+        saveStoredJson(FEATURE_STATE_STORAGE_KEY, {
+            cvAnalysis: latestCvAnalysis,
+            theses: latestThesisResults,
+            jobs: latestJobResults,
+        });
+    }
+
+    function bumpActionDataRevision() {
+        actionDataRevision += 1;
+        dismissedActionRevision = {};
+    }
 
     function escapeHtml(value = '') {
         return value
@@ -115,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPlannerState(state) {
         plannerState = state;
+        bumpActionDataRevision();
         if (!state) {
             plannerSessionCard.classList.add('hidden');
             plannerMemoryBanner.classList.add('hidden');
@@ -173,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
             followupResponse.innerHTML = data.answer || data.rationale || '';
         }
         renderPlannerState(data.plannerState || plannerState);
+        renderActionCenter();
     }
 
     async function loadPlannerSession() {
@@ -186,6 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     rationale: data.lastPlan.rationale || '',
                     plannerState: data,
                 });
+            } else {
+                renderActionCenter();
             }
         } catch (error) {
             renderPlannerState(null);
@@ -203,12 +254,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setCvProfile(profile) {
         currentCvProfile = profile;
+        bumpActionDataRevision();
 
         if (!profile) {
             cvProfileBadge.textContent = 'No CV loaded';
             cvFileCard.classList.add('hidden');
             cvProfileSummary.className = 'cv-profile-summary empty-state';
             cvProfileSummary.innerHTML = 'Upload a CV to extract sections like education, projects, skills, and technologies.';
+            renderActionCenter();
             return;
         }
 
@@ -240,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="pill-row">${renderTagList([...(structured.languages || []), ...(structured.certifications || [])].slice(0, 12))}</div>
             </div>
         `;
+        renderActionCenter();
     }
 
     function renderAcademicSignals(academicProfile = []) {
@@ -327,12 +381,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadHistory() {
         const response = await fetch('/history');
         const data = await response.json();
+        currentHistory = data.completed_courses || [];
+        bumpActionDataRevision();
         historyList.innerHTML = '';
 
         let total = 0;
         let count = 0;
 
-        (data.completed_courses || []).forEach((item) => {
+        currentHistory.forEach((item) => {
             const li = document.createElement('li');
             li.className = 'history-item glass-panel';
             li.innerHTML = `
@@ -354,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         gpaValue.textContent = count > 0 ? (total / count).toFixed(2) : '0.00';
+        renderActionCenter();
 
         document.querySelectorAll('.history-edit').forEach((input) => {
             input.addEventListener('change', async () => {
@@ -391,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
         homeScreen?.classList.add('active');
         tabContents.forEach((content) => content.classList.remove('active'));
         navBtns.forEach((button) => button.classList.remove('active'));
-        homeNavBtn?.classList.add('active');
     }
 
     function openFeature(tabId) {
@@ -404,6 +460,377 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (tabId === 'history') loadHistory();
         if (tabId === 'cv-intelligence') loadCvProfile();
+        if (tabId === 'action-center') renderActionCenter();
+    }
+
+    function priorityWeight(priority) {
+        return { high: 3, medium: 2, low: 1 }[priority] || 0;
+    }
+
+    function makeActionId(parts = []) {
+        return parts.map((part) => String(part || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')).join('-');
+    }
+
+    function createAction(action) {
+        const id = action.id || makeActionId([action.source, action.type, action.title]);
+        return {
+            id,
+            type: action.type || 'navigation',
+            title: action.title || 'Untitled action',
+            description: action.description || '',
+            priority: action.priority || 'medium',
+            status: actionStatusState[id] || action.status || 'open',
+            source: action.source || 'AcademicAI',
+            relatedFeature: action.relatedFeature || '',
+            cta: action.cta || 'Review',
+            url: action.url || '',
+            metadata: action.metadata || {},
+            createdAt: action.createdAt || new Date().toISOString(),
+        };
+    }
+
+    function generateAcademicActions(history = []) {
+        const actions = [];
+        if (!history.length) {
+            actions.push(createAction({
+                id: 'academic-profile-seed',
+                type: 'academic',
+                title: 'Add your completed modules to build a stronger profile',
+                description: 'Your academic profile is still sparse. Adding completed lectures, ECTS, and grades unlocks better planner and career guidance.',
+                priority: 'medium',
+                source: 'Academic Profile',
+                relatedFeature: 'history',
+                cta: 'Open profile',
+                metadata: { internalTab: 'history' },
+            }));
+            return actions;
+        }
+
+        const missingGrades = history.filter((item) => !item.grade || Number(item.grade) <= 0);
+        if (missingGrades.length) {
+            actions.push(createAction({
+                id: 'academic-missing-grades',
+                type: 'academic',
+                title: 'Complete missing grade information',
+                description: `${missingGrades.length} modules still have no grade saved. Filling them in improves profile strength signals and opportunity matching.`,
+                priority: 'medium',
+                source: 'Academic Profile',
+                relatedFeature: 'history',
+                cta: 'Update grades',
+                metadata: { internalTab: 'history' },
+            }));
+        }
+
+        const missingEcts = history.filter((item) => !item.ects);
+        if (missingEcts.length >= 2) {
+            actions.push(createAction({
+                id: 'academic-missing-ects',
+                type: 'handbook',
+                title: 'Add ECTS values for your tracked modules',
+                description: 'ECTS is missing for several courses, which makes next-semester planning and workload balancing less accurate.',
+                priority: 'low',
+                source: 'Academic Profile',
+                relatedFeature: 'history',
+                cta: 'Open profile',
+                metadata: { internalTab: 'history' },
+            }));
+        }
+        return actions;
+    }
+
+    function generatePlannerActions(state) {
+        if (!state?.hasHandbook) {
+            return [
+                createAction({
+                    id: 'planner-upload-handbook',
+                    type: 'handbook',
+                    title: 'Upload your handbook to activate semester planning',
+                    description: 'The planner needs your handbook once so it can answer follow-up questions and recommend semester paths consistently.',
+                    priority: 'high',
+                    source: 'Semester Planner',
+                    relatedFeature: 'planner',
+                    cta: 'Open planner',
+                    metadata: { internalTab: 'planner' },
+                }),
+            ];
+        }
+
+        const actions = [];
+        const latestSchedule = state.lastPlan?.schedule || [];
+        const selectedCourses = state.academicProfile?.selectedCourses || [];
+        const mandatoryModules = state.handbookProfile?.mandatoryModules || [];
+        const savedPlans = Object.keys(state.academicProfile?.semesterRecommendations || {});
+
+        if (latestSchedule.length) {
+            actions.push(createAction({
+                id: 'planner-review-latest',
+                type: 'study-plan',
+                title: 'Review your latest semester recommendation',
+                description: `${latestSchedule.length} courses are currently recommended. Confirm what to keep, replace, or save into your academic profile.`,
+                priority: selectedCourses.length ? 'medium' : 'high',
+                source: 'Semester Planner',
+                relatedFeature: 'planner',
+                cta: 'Review plan',
+                metadata: { internalTab: 'planner' },
+            }));
+        }
+
+        if (savedPlans.length) {
+            actions.push(createAction({
+                id: 'planner-saved-plans',
+                type: 'academic',
+                title: 'Check your saved semester plans before registration',
+                description: `You already have ${savedPlans.length} saved semester plan${savedPlans.length > 1 ? 's' : ''}. Compare them with handbook requirements before finalizing modules.`,
+                priority: 'medium',
+                source: 'Semester Planner',
+                relatedFeature: 'planner',
+                cta: 'Open planner',
+                metadata: { internalTab: 'planner' },
+            }));
+        }
+
+        if (mandatoryModules.length) {
+            actions.push(createAction({
+                id: 'planner-review-mandatory',
+                type: 'academic',
+                title: 'Review handbook mandatory modules for your next semester',
+                description: 'Your handbook cache includes mandatory module information. Use it to verify upcoming semester choices before registration.',
+                priority: 'high',
+                source: 'Handbook Analysis',
+                relatedFeature: 'planner',
+                cta: 'Open planner',
+                metadata: { internalTab: 'planner' },
+            }));
+        }
+        return actions;
+    }
+
+    function generateOpportunityActions(resultSet, sourceLabel, internalTab) {
+        const items = resultSet?.items || [];
+        const query = resultSet?.query || '';
+        if (!items.length) return [];
+
+        const actions = [];
+        const topItem = items[0];
+        actions.push(createAction({
+            id: makeActionId([sourceLabel, 'top', topItem.title]),
+            type: 'opportunity',
+            title: `Strong ${sourceLabel.toLowerCase()} match: ${topItem.title}`,
+            description: `Your recent topic query${query ? ` "${query}"` : ''} produced a strong match at ${topItem.chair || 'the relevant chair'}.`,
+            priority: topItem.semanticScore > 0.45 ? 'high' : 'medium',
+            source: sourceLabel,
+            relatedFeature: internalTab,
+            cta: topItem.url ? 'Open posting' : 'Review results',
+            url: topItem.url || '',
+            metadata: { internalTab },
+        }));
+
+        if (items.length > 1) {
+            actions.push(createAction({
+                id: makeActionId([sourceLabel, 'review', query || 'results']),
+                type: 'application',
+                title: `Review ${items.length} ranked ${sourceLabel.toLowerCase()} opportunities`,
+                description: 'There are multiple relevant matches waiting. Compare requirements and shortlist the most promising ones.',
+                priority: 'medium',
+                source: sourceLabel,
+                relatedFeature: internalTab,
+                cta: 'See results',
+                metadata: { internalTab },
+            }));
+        }
+        return actions;
+    }
+
+    function generateCvActions(cvProfile, cvAnalysis) {
+        if (!cvProfile) {
+            return [
+                createAction({
+                    id: 'cv-upload-first',
+                    type: 'cv-improvement',
+                    title: 'Upload your CV to unlock application actions',
+                    description: 'CV Intelligence can highlight missing evidence, skills, and career directions once a CV is uploaded.',
+                    priority: 'medium',
+                    source: 'CV Intelligence',
+                    relatedFeature: 'cv-intelligence',
+                    cta: 'Open CV Intelligence',
+                    metadata: { internalTab: 'cv-intelligence' },
+                }),
+            ];
+        }
+
+        const actions = [];
+        const missing = cvAnalysis?.comparison?.missingHighlights || [];
+        const improvementIdeas = cvAnalysis?.analysis?.improvementIdeas || [];
+        const careerDirections = cvAnalysis?.comparison?.careerDirections || [];
+
+        if (missing.length) {
+            const topGap = missing[0];
+            actions.push(createAction({
+                id: makeActionId(['cv-gap', topGap.area || topGap.title]),
+                type: 'cv-improvement',
+                title: `Address a CV gap: ${topGap.area || topGap.title}`,
+                description: topGap.reason || topGap.detail || 'One of your study-backed strengths is underrepresented on the CV.',
+                priority: 'high',
+                source: 'CV Intelligence',
+                relatedFeature: 'cv-intelligence',
+                cta: 'Review CV suggestions',
+                metadata: { internalTab: 'cv-intelligence' },
+            }));
+        }
+
+        if (improvementIdeas.length) {
+            actions.push(createAction({
+                id: 'cv-improvement-ideas',
+                type: 'cv-improvement',
+                title: 'Turn coursework into stronger CV evidence',
+                description: improvementIdeas[0],
+                priority: 'medium',
+                source: 'CV Intelligence',
+                relatedFeature: 'cv-intelligence',
+                cta: 'Open CV Intelligence',
+                metadata: { internalTab: 'cv-intelligence' },
+            }));
+        }
+
+        if (careerDirections.length) {
+            actions.push(createAction({
+                id: 'cv-career-direction',
+                type: 'application',
+                title: `Explore a fitting direction: ${careerDirections[0].role}`,
+                description: careerDirections[0].why,
+                priority: 'medium',
+                source: 'CV Intelligence',
+                relatedFeature: 'cv-intelligence',
+                cta: 'See career fit',
+                metadata: { internalTab: 'cv-intelligence' },
+            }));
+        }
+        return actions;
+    }
+
+    function collectAllActions() {
+        const generated = [
+            ...generatePlannerActions(plannerState),
+            ...generateAcademicActions(currentHistory),
+            ...generateCvActions(currentCvProfile, latestCvAnalysis),
+            ...generateOpportunityActions(latestThesisResults, 'Thesis Finder', 'theses'),
+            ...generateOpportunityActions(latestJobResults, 'Research & HiWi', 'jobs'),
+        ];
+
+        return generated
+            .map((action) => ({ ...action, status: actionStatusState[action.id] || action.status || 'open' }))
+            .sort((left, right) => {
+                const leftClosed = ['done', 'dismissed'].includes(left.status);
+                const rightClosed = ['done', 'dismissed'].includes(right.status);
+                if (leftClosed !== rightClosed) return leftClosed ? 1 : -1;
+                return priorityWeight(right.priority) - priorityWeight(left.priority);
+            });
+    }
+
+    function getActionStatusCounts(actions) {
+        return {
+            open: actions.filter((action) => action.status === 'open').length,
+            high: actions.filter((action) => action.priority === 'high' && !['done', 'dismissed'].includes(action.status)).length,
+            opportunities: actions.filter((action) => ['opportunity', 'application'].includes(action.type) && action.status !== 'dismissed').length,
+            completed: actions.filter((action) => action.status === 'done').length,
+        };
+    }
+
+    function setActionStatus(actionId, status) {
+        if (status === 'dismissed') {
+            delete actionStatusState[actionId];
+            dismissedActionRevision[actionId] = actionDataRevision;
+        } else {
+            delete dismissedActionRevision[actionId];
+            actionStatusState[actionId] = status;
+        }
+        saveStoredJson(ACTION_CENTER_STORAGE_KEY, actionStatusState);
+        renderActionCenter();
+    }
+
+    function handleActionCta(action) {
+        if (!action) return;
+        if (action.url) {
+            window.open(action.url, '_blank', 'noopener,noreferrer');
+            return;
+        }
+        if (action.metadata?.internalTab) {
+            openFeature(action.metadata.internalTab);
+        }
+    }
+
+    // Thin action-generation layer: consume existing module outputs and map them into actionable dashboard items.
+    function renderActionCenter() {
+        if (!actionSummaryGrid || !actionList || !actionEmptyState) return;
+
+        const actions = collectAllActions();
+        const visibleActions = actions.filter(
+            (action) => dismissedActionRevision[action.id] !== actionDataRevision
+        );
+        const counts = getActionStatusCounts(visibleActions);
+
+        actionSummaryGrid.innerHTML = `
+            <div class="glass-panel action-summary-card">
+                <span>Open Actions</span>
+                <strong>${counts.open}</strong>
+            </div>
+            <div class="glass-panel action-summary-card">
+                <span>High Priority</span>
+                <strong>${counts.high}</strong>
+            </div>
+            <div class="glass-panel action-summary-card">
+                <span>Opportunities</span>
+                <strong>${counts.opportunities}</strong>
+            </div>
+            <div class="glass-panel action-summary-card">
+                <span>Completed</span>
+                <strong>${counts.completed}</strong>
+            </div>
+        `;
+
+        if (!visibleActions.length) {
+            actionEmptyState.classList.remove('hidden');
+            actionList.innerHTML = '';
+            return;
+        }
+
+        actionEmptyState.classList.add('hidden');
+        actionList.innerHTML = visibleActions
+            .map((action) => `
+                <article class="glass-panel action-card action-status-${escapeHtml(action.status)}">
+                    <div class="action-card-top">
+                        <div class="action-main-copy">
+                            <div class="action-badges">
+                                <span class="status-chip ${escapeHtml(action.priority)}">${escapeHtml(action.priority)}</span>
+                                <span class="status-chip">${escapeHtml(action.source)}</span>
+                                <span class="status-chip">${escapeHtml(action.status)}</span>
+                            </div>
+                            <h3>${escapeHtml(action.title)}</h3>
+                            <p>${escapeHtml(action.description)}</p>
+                        </div>
+                        <button class="btn-primary inline-btn action-cta-btn" data-action-id="${escapeHtml(action.id)}">${escapeHtml(action.cta)}</button>
+                    </div>
+                    <div class="action-controls">
+                        <button class="btn-secondary inline-btn action-status-btn" data-action-id="${escapeHtml(action.id)}" data-status="open">Open</button>
+                        <button class="btn-secondary inline-btn action-status-btn" data-action-id="${escapeHtml(action.id)}" data-status="saved">Save</button>
+                        <button class="btn-secondary inline-btn action-status-btn" data-action-id="${escapeHtml(action.id)}" data-status="done">Done</button>
+                        <button class="btn-secondary inline-btn action-status-btn" data-action-id="${escapeHtml(action.id)}" data-status="dismissed">Dismiss</button>
+                    </div>
+                </article>
+            `)
+            .join('');
+
+        const actionMap = new Map(visibleActions.map((action) => [action.id, action]));
+        actionList.querySelectorAll('.action-status-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                setActionStatus(button.getAttribute('data-action-id'), button.getAttribute('data-status'));
+            });
+        });
+        actionList.querySelectorAll('.action-cta-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                handleActionCta(actionMap.get(button.getAttribute('data-action-id')));
+            });
+        });
     }
 
     navBtns.forEach((btn) => {
@@ -416,13 +843,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => openFeature(btn.getAttribute('data-target-tab')));
     });
 
-    homeNavBtn?.addEventListener('click', showHome);
     homeTrigger?.addEventListener('click', showHome);
 
     dropZone?.addEventListener('click', () => handbookInput?.click());
     handbookInput?.addEventListener('change', updatePlannerUploadState);
 
-        plannerForm?.addEventListener('submit', async (e) => {
+    plannerForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!handbookInput.files[0] && !(plannerState && plannerState.hasHandbook)) {
             alert('Please upload a handbook to start the planner session.');
@@ -574,6 +1000,8 @@ document.addEventListener('DOMContentLoaded', () => {
         cvDropZone.style.borderColor = 'var(--glass-border)';
         cvAnalysisResults.className = 'cv-analysis-results empty-state';
         cvAnalysisResults.innerHTML = 'Add your CV and coursework, then ask what strengths, gaps, and internship directions appear.';
+        latestCvAnalysis = null;
+        persistFeatureState();
         setCvProfile(null);
     });
 
@@ -593,7 +1021,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/cv/intelligence', { method: 'POST', body: fd });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
+            latestCvAnalysis = data;
+            persistFeatureState();
             renderCvAnalysis(data);
+            renderActionCenter();
         } catch (error) {
             cvAnalysisResults.className = 'cv-analysis-results empty-state';
             cvAnalysisResults.textContent = error.message || 'Could not run CV Intelligence.';
@@ -613,6 +1044,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const resp = await fetch(`${url}?query=${encodeURIComponent(query)}`);
             const data = await resp.json();
             results.innerHTML = data.recommendations || 'No matches.';
+            if (url === '/theses') {
+                latestThesisResults = { query, items: data.items || [] };
+            } else if (url === '/jobs') {
+                latestJobResults = { query, items: data.items || [] };
+            }
+            persistFeatureState();
+            renderActionCenter();
         } catch (error) {
             results.innerHTML = '<p>Error.</p>';
         } finally {
@@ -635,5 +1073,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
     loadCvProfile();
     loadPlannerSession();
+    renderActionCenter();
     showHome();
 });

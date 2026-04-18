@@ -24,7 +24,7 @@
                 </div>
             </div>
             <nav class="main-nav">
-                <button class="nav-btn home-nav-btn" id="home-nav-btn">Home</button>
+                <button class="nav-btn" data-tab="action-center">Action Center</button>
                 <button class="nav-btn" data-tab="planner">Semester Planner</button>
                 <button class="nav-btn" data-tab="cv-intelligence">CV Intelligence</button>
                 <button class="nav-btn" data-tab="theses">Thesis Finder</button>
@@ -42,6 +42,12 @@
                 </div>
 
                 <div class="home-grid">
+                    <button class="feature-card glass-panel feature-launch feature-card-primary" data-target-tab="action-center">
+                        <span class="feature-kicker">Dashboard</span>
+                        <h3>Action Center</h3>
+                        <p>See your most important next steps across planning, opportunities, CV improvement, and academic follow-through in one place.</p>
+                    </button>
+
                     <button class="feature-card glass-panel feature-launch" data-target-tab="planner">
                         <span class="feature-kicker">Planning</span>
                         <h3>Semester Planner</h3>
@@ -71,6 +77,22 @@
                         <h3>Academic Profile</h3>
                         <p>Track completed modules, grades, ECTS, and categories so the rest of the platform can personalize guidance.</p>
                     </button>
+                </div>
+            </section>
+
+            <section id="action-center-tab" class="tab-content">
+                <div class="action-center-shell">
+                    <div class="glass-panel action-hero">
+                        <div>
+                            <p class="home-eyebrow">Action Center</p>
+                            <h2>Your prioritized next steps across study planning, opportunities, and applications.</h2>
+                            <p class="home-subtitle">This dashboard turns outputs from AcademicAI into concrete actions so the platform feels proactive, not just reactive.</p>
+                        </div>
+                    </div>
+
+                    <div id="action-summary-grid" class="action-summary-grid"></div>
+                    <div id="action-empty-state" class="empty-state hidden">Use the planner, thesis finder, HiWi search, CV Intelligence, or Academic Profile to generate actions here.</div>
+                    <div id="action-list" class="action-list"></div>
                 </div>
             </section>
 

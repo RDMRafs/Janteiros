@@ -1,34 +1,76 @@
 [
   {
-    "courseName": "Einführung in die Informatik",
-    "grade": 2.0,
-    "ects": null,
-    "semesterCompleted": "",
-    "category": ""
-  },
-  {
-    "courseName": "Grundlagenpraktikum: Programmierung",
-    "grade": 3.0,
-    "ects": null,
-    "semesterCompleted": "",
-    "category": ""
-  },
-  {
-    "courseName": "Einführung in die Wirtschaftsinformatik",
+    "courseName": "Linear Algebra for Computer Science",
     "grade": null,
     "ects": null,
     "semesterCompleted": "",
     "category": ""
   },
   {
-    "courseName": "Financial Accounting",
+    "courseName": "Analysis for Computer Science",
     "grade": null,
     "ects": null,
     "semesterCompleted": "",
     "category": ""
   },
   {
-    "courseName": "Diskrete Strukturen",
+    "courseName": "Introduction to Software Engineering",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Fundamentals: Algorithms and Data Structures",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Cost Accounting",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Fundamentals: Databases",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Investment and Financial Management",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Applied Econometrics",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Fundamentals: Computer Networks and Distributed Systems",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Discrete Probability Theory",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Introduction to Data Science and Statistical Thinking",
     "grade": null,
     "ects": null,
     "semesterCompleted": "",

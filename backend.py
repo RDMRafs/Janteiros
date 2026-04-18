@@ -700,6 +700,20 @@ def render_postings_html(postings, empty_message):
     return "".join(cards)
 
 
+def serialize_postings(postings):
+    return [
+        {
+            "id": posting.get("id", ""),
+            "title": posting.get("title", ""),
+            "description": posting.get("description", ""),
+            "chair": posting.get("chair", ""),
+            "url": posting.get("url", ""),
+            "semanticScore": posting.get("semanticScore", 0),
+        }
+        for posting in postings
+    ]
+
+
 def split_into_sections(text):
     sections = {key: "" for key in SECTION_PATTERNS}
     normalized_lines = [line.strip() for line in text.splitlines() if line.strip()]
@@ -1390,7 +1404,8 @@ async def search_theses(query: str = ""):
             "recommendations": render_postings_html(
                 ranked,
                 "No thesis topics matched your current topic request.",
-            )
+            ),
+            "items": serialize_postings(ranked),
         }
     except Exception as e:
         return {"error": str(e)}
@@ -1406,7 +1421,8 @@ async def search_jobs(query: str = ""):
             "recommendations": render_postings_html(
                 ranked,
                 "No research or HiWi postings matched your current topic request.",
-            )
+            ),
+            "items": serialize_postings(ranked),
         }
     except Exception as e:
         return {"error": str(e)}

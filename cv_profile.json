@@ -1,35 +1,91 @@
 {
-  "fileName": "Lebenslauf abertura euro.pdf",
-  "rawText": "Persönliche Infos\nPlievierpark 16\n81737 München\nDeutschland\n+49 163 1774875\nrafacurih@gmail.com\n16.09.2004 in São Paulo,\nBrasilien\nFähigkeiten\nfleißig\nteamfähig\nkreativ\nkommunikativ\ngeduldig\nÜber mich\nEDV-Kenntnisse: Gute Kenntnisse in\nWord, PowerPoint und Excel. Gute\nKenntnisse in Java und\nGrundkenntnisse in Python.\nSprachkenntnisse: Hervorragende\nKenntnisse in Portugiesisch, Deutsch\nund Englisch; Durchschnittliche\nKenntnisse in Spanisch.\nZertiﬁkate: Englisch: Cambridge First\nCertiﬁcate in English (B2); Deutsch:\nDSD II (C1), Abitur; Spanisch: DELE\n(B2); Mathematik: Känguru der\nMathematik 2020, 2021 und 2022;\nLobende Erwähnung in der ONC\n(Nationale Brasilianische\nWissenschaftsolympiade).\nAusbildung\nTUM (Technische Universität München)\n2024 - Heute\nBachelor\nWirtschaftsinformatik\nUSP (Universität von São Paulo)\n2023 - 2023\nBachelor\n1 Semester Betriebswirtschaftslehre\nErfahrung\n2018 - Heute\nFreiwilige Arbeit \"Família acolhedora\"\nFreiwilige Arbeit zur Betreuung von Babys und Kindern, was\nzu meiner Reife beigetragen hat\n2018 - 2018\nFuβballmeisterschaften in Europa gespielt\nEinzige in das Team, der Englisch sprach, musste die\nVerantwortung in unvorhergesehenen Situationen\nübernehmen\n2021 - 2021\nLobende Erwähnung an POSMUN\nLobende Erwähnung bei POSMUN (UN-Simulation) als\nDelegierter, aufgrund meiner klaren und überzeugenden\nKommunikationsweise\n2022 - 2022\nMonitoring für Grundschule Kinder\nErfahrung, die mir geholfen hat, eine bessere Organisation\nund eine verbesserte Art zu haben, Ideen zu erklären.\n2023 - 2023\nFreiwilligenarbeit im Senegal\nFreiwilligenarbeit mit Straßenkindern, bei der ich im Team\ngearbeitet habe, um die Schule der Kinder zu renovieren\nRafael Curi Hilsenrath\nLebenslauf\nSeite 1",
+  "fileName": "CV Ingles Praktikums.pdf",
+  "rawText": "Rafael Curi Hilsenrath \nPlievierpark 16 • Munich, 81737 • rafael.curi-hilsenrath@tum.de • +49 163 1774875 • www.linkedin.com/in/rafael-curi- \nhilsenrath \nNationality: Brazilian and Polish \nEducation \nTechnical University of Munich Munich \nB.Sc. Information Systems \n5th semester \n10.2023 - Present \n \nUniversity of São Paulo (USP) Sao Paulo, Brazil \nB.Sc. Business Administration \n1 semester \n02.2023 – 08.2023 \n \nColégio Visconde de Porto Seguro (German School in São Paulo) \nForeign Abitur; Average grade: 1.9 \nSao Paulo, Brazil \nGraduation Date: \n10.2022 \n \nExperience \n \nDevelopment Assistant at Canon   Munich, Germany \nWorking student 10.2025 – Present \n Responsible for Quality Planning and Validation of printing software systems \n Develop and maintain Shell scripts for test automation and system validation \n Perform manual testing and quality assurance, working in a Scrum environment using Azure DevOps \n \nTUM IT Operations Helpdesk Munich, Germany \nHilfswissenschaftler 10.2024 – 08.2025 \n First point of contact for IT problems (hardware/software) for students and employees \n Processing requests regarding workstations, printers, Wi-Fi and VPN \n Maintaining the wiki database for quick resolution of frequent IT queries \n \nNeuron DS&AI Ribeirão Preto, Brazil \nTrainee 02.2023 – 08.2023 \n Training in Python and Power BI for project development \n Analyzing and cleaning data sets with Python/Pandas \n Creating interactive Power BI dashboards for presentations \n \n \nProgramming projects \n \nSEBA Mobility Services – Backend Development (github.com/RDMRafs/SEBA- \nMobility-Services-project) \nUniversity project \n2024 \nJava, Spring Boot, JPA/Hibernate  \n Development of a backend system for managing customers, employees, vehicles, rentals and invoices as part of a \nuniversity project in collaboration with a fellow student \n Implementing REST APIs for CRUD operations with Spring Boot and data persistence with JPA/Hibernate \nKnowledge \n Technical: Java, Python, Power BI, R, SQL, Linux, Shell scripting, AzureDevOps, Git, Microsoft Office \n Language: Portuguese (native), German (C1), English (B2), Spanish (B2) \n Certificates and awards: Quant Challenge Itaú 2024 (financial competition with a focus on quantitative analysis), \nKPMG Audit Summer Clash 2025 (audit/business competition), HackaTUM 2025- Optiver trading bot \n \nSoft skills \n Proactive \n Team player \n Communicative \n Problem-solving skills \n \nAdditional information \n Honorable Mention at POSMUN (UN Simulation) as a delegate, recognized for clear and persuasive communication \nskills \n Tutoring elementary school children, improving my organizational skills and ability to explain ideas clearly \n Volunteered with street children in Senegal, working as part of a team to renovate the children’s school \n Extensive football experience with participation in European championships; as the only English speaker in the \nteam, took responsibility in unexpected situations ",
   "structuredProfile": {
-    "name": "Persönliche Infos",
-    "education": [],
-    "workExperience": [],
+    "name": "Rafael Curi Hilsenrath",
+    "education": [
+      "Technical University of Munich Munich",
+      "B.Sc. Information Systems",
+      "5th semester",
+      "10.2023 - Present",
+      "University of São Paulo (USP) Sao Paulo",
+      "Brazil",
+      "B.Sc. Business Administration",
+      "1 semester",
+      "02.2023 – 08.2023",
+      "Colégio Visconde de Porto Seguro (German School in São Paulo)",
+      "Foreign Abitur; Average grade: 1.9",
+      "Sao Paulo",
+      "Brazil",
+      "Graduation Date:",
+      "10.2022"
+    ],
+    "workExperience": [
+      "Development Assistant at Canon Munich",
+      "Germany",
+      "Working student 10.2025 – Present",
+      " Responsible for Quality Planning and Validation of printing software systems",
+      " Develop and maintain Shell scripts for test automation and system validation",
+      " Perform manual testing and quality assurance",
+      "working in a Scrum environment using Azure DevOps",
+      "TUM IT Operations Helpdesk Munich",
+      "Germany",
+      "Hilfswissenschaftler 10.2024 – 08.2025",
+      " First point of contact for IT problems (hardware/software) for students and employees",
+      " Processing requests regarding workstations",
+      "printers",
+      "Wi-Fi and VPN",
+      " Maintaining the wiki database for quick resolution of frequent IT queries",
+      "Neuron DS&AI Ribeirão Preto",
+      "Brazil",
+      "Trainee 02.2023 – 08.2023",
+      " Training in Python and Power BI for project development",
+      " Analyzing and cleaning data sets with Python/Pandas",
+      " Creating interactive Power BI dashboards for presentations",
+      "Programming projects",
+      "SEBA Mobility Services – Backend Development (github.com/RDMRafs/SEBA-",
+      "Mobility-Services-project)",
+      "University project"
+    ],
     "projects": [],
-    "skills": [],
+    "skills": [
+      " Tutoring elementary school children",
+      "improving my organizational skills and ability to explain ideas clearly",
+      " Volunteered with street children in Senegal",
+      "working as part of a team to renovate the children’s school",
+      " Extensive football experience with participation in European championships; as the only English speaker in the",
+      "team",
+      "took responsibility in unexpected situations"
+    ],
     "toolsAndTechnologies": [
       "ai",
+      "api",
+      "business",
       "c",
-      "excel",
+      "database",
+      "development",
+      "git",
       "java",
-      "llm",
+      "linux",
       "os",
-      "python"
+      "pandas",
+      "programming",
+      "python",
+      "scrum",
+      "software",
+      "sql",
+      "systems",
+      "testing"
     ],
     "certifications": [],
     "languages": [],
     "contact": {
       "emails": [
-        "rafacurih@gmail.com"
+        "rafael.curi-hilsenrath@tum.de"
       ],
       "urls": [],
       "phones": [
-        "+49 163 1774875",
-        "16.09.2004",
-        "2018 - 2018",
-        "2021 - 2021",
-        "2022 - 2022",
-        "2023 - 2023"
+        "+49 163 1774875"
       ]
     }
   }
