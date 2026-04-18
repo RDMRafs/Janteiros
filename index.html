@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academic Life Cycle Assistant | TUM</title>
+    <title>AcademicAI | Study-to-Career Copilot</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -20,33 +20,32 @@
                 <div class="logo-icon">🎓</div>
                 <div class="logo-text">
                     <h1>AcademicAI</h1>
-                    <span>TUM Life Cycle Assistant</span>
+                    <span>Study-to-career copiloting for TUM students</span>
                 </div>
             </div>
             <nav class="main-nav">
                 <button class="nav-btn active" data-tab="planner">Semester Planner</button>
+                <button class="nav-btn" data-tab="cv-intelligence">CV Intelligence</button>
                 <button class="nav-btn" data-tab="theses">Thesis Finder</button>
                 <button class="nav-btn" data-tab="jobs">Research & HiWi</button>
-                <button class="nav-btn" data-tab="history">Course History</button>
+                <button class="nav-btn" data-tab="history">Academic Profile</button>
             </nav>
         </header>
 
         <main class="content-area">
-            <!-- TAB 1: PLANNER -->
             <section id="planner-tab" class="tab-content active">
                 <div class="grid-layout">
-                    <!-- Input Panel -->
                     <div id="input-panel" class="glass-panel">
                         <h2>Plan Your Semester</h2>
                         <p>Upload your course handbook and tell the AI your academic goals.</p>
-                        
+
                         <form id="planner-form" class="planner-form">
                             <div class="upload-zone" id="drop-zone">
                                 <input type="file" id="handbook" accept=".pdf" hidden>
                                 <div class="upload-content" id="upload-status-area">
                                     <span class="upload-icon" id="status-icon">📄</span>
                                     <p id="status-text-display">Drop course handbook (PDF) or click to browse</p>
-                                    <span id="selected-file-name" style="display: block; margin-top: 10px; color: var(--primary); font-weight: bold; font-size: 0.9rem;"></span>
+                                    <span id="selected-file-name" class="selected-file-name"></span>
                                 </div>
                             </div>
 
@@ -59,7 +58,6 @@
                         </form>
                     </div>
 
-                    <!-- Output Panel -->
                     <div id="output-panel" class="glass-panel hidden">
                         <div id="agent-status" class="agent-status hidden">
                             <div class="spinner"></div>
@@ -70,34 +68,32 @@
                         </div>
 
                         <div id="results-content" class="results-content hidden">
-                            <div class="results-header glass-panel" style="margin-bottom: 25px; border-color: var(--primary-glow);">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="results-header glass-panel result-header-card">
+                                <div class="header-row">
                                     <div>
-                                        <h3 style="color: var(--primary); font-size: 1.5rem;">Optimized Schedule</h3>
-                                        <p style="color: var(--text-dim); font-size: 0.9rem;">Review and accept your new academic path.</p>
+                                        <h3>Optimized Schedule</h3>
+                                        <p>Review and accept your new academic path.</p>
                                     </div>
-                                    <div class="actions" style="display: flex; gap: 10px;">
-                                        <button id="reset-btn" class="btn-secondary" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px 20px; border-radius: 12px; cursor: pointer;">Discard</button>
-                                        <button id="accept-plan-btn" class="btn-primary" style="box-shadow: 0 0 20px var(--primary-glow);">Accept & Save Plan</button>
+                                    <div class="actions">
+                                        <button id="reset-btn" class="btn-secondary">Discard</button>
+                                        <button id="accept-plan-btn" class="btn-primary inline-btn">Accept & Save Plan</button>
                                     </div>
                                 </div>
                             </div>
 
-                            <div id="schedule-container" class="schedule-grid">
-                                <!-- Cards generated here -->
-                            </div>
+                            <div id="schedule-container" class="schedule-grid"></div>
 
-                            <div class="rationale-section glass-panel" style="margin-top: 30px;">
-                                <h4 style="color: var(--elective); margin-bottom: 15px;">AI Rationale</h4>
+                            <div class="rationale-section glass-panel section-spacer">
+                                <h4>AI Rationale</h4>
                                 <div id="rationale-text"></div>
-                                
-                                <div id="followup-area" style="margin-top: 25px; border-top: 1px solid var(--glass-border); padding-top: 20px;">
-                                    <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;">Have questions about this plan?</p>
-                                    <div style="display: flex; gap: 10px;">
-                                        <input type="text" id="followup-input" placeholder="e.g. Can I swap the Tuesday module?" style="flex: 1;">
-                                        <button id="followup-btn" class="btn-primary" style="width: auto; padding: 0 20px;">Ask AI</button>
+
+                                <div id="followup-area" class="followup-area">
+                                    <p>Have questions about this plan?</p>
+                                    <div class="inline-form">
+                                        <input type="text" id="followup-input" placeholder="e.g. Can I swap the Tuesday module?">
+                                        <button id="followup-btn" class="btn-primary inline-btn">Ask AI</button>
                                     </div>
-                                    <div id="followup-response" style="margin-top: 15px; font-size: 0.95rem; color: var(--text-main);"></div>
+                                    <div id="followup-response" class="followup-response"></div>
                                 </div>
                             </div>
                         </div>
@@ -105,48 +101,120 @@
                 </div>
             </section>
 
-            <!-- TAB 2: THESES -->
-            <section id="theses-tab" class="tab-content">
-                <div class="glass-panel">
-                    <h2>Thesis Finder</h2>
-                    <p>Search live Bachelor/Master thesis offers from the TUM School of Natural Sciences.</p>
-                    <div class="form-group" style="margin-top: 20px;">
-                        <input type="text" id="thesis-query" placeholder="Enter research interests (e.g. Machine Learning, Physics)...">
-                        <button id="search-theses-btn" class="btn-primary" style="margin-top: 10px;">Find Thesis Topics</button>
+            <section id="cv-intelligence-tab" class="tab-content">
+                <div class="cv-layout">
+                    <div class="glass-panel">
+                        <h2>CV Intelligence</h2>
+                        <p>Upload your CV, combine it with courses and academic context, and get grounded study-to-career feedback.</p>
+
+                        <div class="upload-zone compact-upload" id="cv-drop-zone">
+                            <input type="file" id="cv-file" accept=".pdf,.txt,.docx" hidden>
+                            <div class="upload-content">
+                                <span class="upload-icon" id="cv-status-icon">📄</span>
+                                <p id="cv-status-text">Upload CV or résumé (PDF, TXT, DOCX)</p>
+                                <span id="cv-selected-file-name" class="selected-file-name"></span>
+                            </div>
+                        </div>
+
+                        <div id="cv-file-card" class="file-card hidden"></div>
+
+                        <div class="inline-form button-row">
+                            <button id="upload-cv-btn" class="btn-primary inline-btn">Parse CV</button>
+                            <button id="delete-cv-btn" class="btn-secondary inline-btn">Delete CV</button>
+                        </div>
+
+                        <div class="form-group section-spacer">
+                            <label for="cv-question">What do you want help with?</label>
+                            <textarea id="cv-question" placeholder="e.g. Can you evaluate my CV based on my lectures? What should I add?"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="academic-notes">Optional academic notes or transcript-like text</label>
+                            <textarea id="academic-notes" placeholder="Paste transcript notes, specializations, seminar topics, or handbook extracts here."></textarea>
+                        </div>
+
+                        <div class="dual-upload-grid">
+                            <label class="mini-upload">
+                                <span>Optional handbook</span>
+                                <input type="file" id="cv-handbook-file" accept=".pdf,.txt,.docx">
+                            </label>
+                            <label class="mini-upload">
+                                <span>Optional transcript file</span>
+                                <input type="file" id="cv-transcript-file" accept=".pdf,.txt,.docx">
+                            </label>
+                        </div>
+
+                        <button id="run-cv-analysis-btn" class="btn-primary section-spacer">Run CV Intelligence</button>
                     </div>
-                    <div id="thesis-results" class="thesis-results-container">
-                        <!-- Results will appear here -->
+
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>Current CV Profile</h3>
+                                <p>Heuristic parsing plus academic comparison.</p>
+                            </div>
+                            <span id="cv-profile-badge" class="status-chip">No CV loaded</span>
+                        </div>
+
+                        <div id="cv-profile-summary" class="cv-profile-summary empty-state">
+                            Upload a CV to extract sections like education, projects, skills, and technologies.
+                        </div>
+
+                        <div id="cv-analysis-status" class="info-banner hidden">Comparing your CV with your academic profile...</div>
+                        <div id="cv-analysis-results" class="cv-analysis-results empty-state">
+                            Add your CV and coursework, then ask what strengths, gaps, and internship directions appear.
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- TAB 2.5: JOBS -->
+            <section id="theses-tab" class="tab-content">
+                <div class="glass-panel">
+                    <h2>Thesis Finder</h2>
+                    <p>Search live Bachelor/Master thesis offers from the TUM School of Natural Sciences.</p>
+                    <div class="form-group section-spacer">
+                        <input type="text" id="thesis-query" placeholder="Enter research interests (e.g. Machine Learning, Physics)...">
+                        <button id="search-theses-btn" class="btn-primary top-gap">Find Thesis Topics</button>
+                    </div>
+                    <div id="thesis-results" class="thesis-results-container"></div>
+                </div>
+            </section>
+
             <section id="jobs-tab" class="tab-content">
                 <div class="glass-panel">
                     <h2>Research & Student Assistant (HiWi) Finder</h2>
                     <p>Find student assistant positions and research projects matched to your skills.</p>
-                    <div class="form-group" style="margin-top: 20px;">
+                    <div class="form-group section-spacer">
                         <input type="text" id="job-query" placeholder="e.g. Python Developer, Lab Assistant, Data Analysis">
-                        <button id="search-jobs-btn" class="btn-primary" style="margin-top: 10px; background: var(--elective);">Search HiWi Opportunities</button>
+                        <button id="search-jobs-btn" class="btn-primary top-gap accent-btn">Search HiWi Opportunities</button>
                     </div>
-                    <div id="job-results" class="thesis-results-container" style="margin-top: 20px;"></div>
+                    <div id="job-results" class="thesis-results-container"></div>
                 </div>
             </section>
 
             <section id="history-tab" class="tab-content">
                 <div class="glass-panel">
-                    <h2>Course History</h2>
-                    <div class="gpa-banner glass-panel" style="margin-bottom: 20px; text-align: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
-                        <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Average Grade</p>
-                        <h1 id="gpa-value" style="color: var(--primary); margin: 0; font-size: 2.5rem;">0.00</h1>
+                    <div class="panel-header">
+                        <div>
+                            <h2>Academic Profile</h2>
+                            <p>Track completed modules with optional grades, ECTS, semester, and category.</p>
+                        </div>
+                        <div class="gpa-banner glass-panel">
+                            <p>Average Grade</p>
+                            <h1 id="gpa-value">0.00</h1>
+                        </div>
                     </div>
-                    <div class="form-group" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                        <input type="text" id="new-history-course" placeholder="Enter course name..." style="flex: 1;">
-                        <button id="add-history-btn" class="btn-primary" style="width: 120px;">Add</button>
+
+                    <div class="history-form-grid section-spacer">
+                        <input type="text" id="new-history-course" placeholder="Course or module name">
+                        <input type="number" id="new-history-grade" placeholder="Grade" step="0.1" min="1.0" max="5.0">
+                        <input type="number" id="new-history-ects" placeholder="ECTS" step="0.5" min="0">
+                        <input type="text" id="new-history-semester" placeholder="Semester completed">
+                        <input type="text" id="new-history-category" placeholder="Category (optional)">
+                        <button id="add-history-btn" class="btn-primary">Add Course</button>
                     </div>
-                    <ul id="history-list" class="history-list">
-                        <!-- Items with editable grades will be here -->
-                    </ul>
+
+                    <ul id="history-list" class="history-list"></ul>
                 </div>
             </section>
         </main>
