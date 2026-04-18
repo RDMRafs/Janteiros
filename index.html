@@ -288,6 +288,41 @@
             </section>
         </main>
     </div>
+
+    <button id="roulette-trigger" class="roulette-trigger" aria-label="Open survival roulette">
+        Need motivation?
+    </button>
+
+    <div id="roulette-modal" class="roulette-modal hidden" aria-hidden="true">
+        <div class="roulette-backdrop" id="roulette-backdrop"></div>
+        <div class="roulette-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="roulette-title">
+            <button id="roulette-close" class="roulette-close" aria-label="Close survival roulette">×</button>
+            <p class="home-eyebrow">Motivation Emergency</p>
+            <h2 id="roulette-title">Survival Roulette</h2>
+            <p class="roulette-subtitle">The odds look terrible. The outcome does not.</p>
+
+            <div class="roulette-stage">
+                <div class="roulette-pointer"></div>
+                <div class="roulette-wheel-wrap">
+                    <svg
+                        id="roulette-wheel"
+                        class="roulette-wheel"
+                        viewBox="0 0 320 320"
+                        aria-label="Motivation roulette wheel"
+                    ></svg>
+                </div>
+            </div>
+
+            <div id="roulette-result" class="roulette-result">
+                Press start and let fate be emotionally corrected.
+            </div>
+
+            <div class="roulette-actions">
+                <button id="roulette-start" class="btn-primary inline-btn">Start</button>
+                <button id="roulette-retry" class="btn-secondary inline-btn">Spin Again</button>
+            </div>
+        </div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>

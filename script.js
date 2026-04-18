@@ -69,6 +69,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const actionSummaryGrid = document.getElementById('action-summary-grid');
     const actionEmptyState = document.getElementById('action-empty-state');
     const actionList = document.getElementById('action-list');
+    const rouletteTrigger = document.getElementById('roulette-trigger');
+    const rouletteModal = document.getElementById('roulette-modal');
+    const rouletteBackdrop = document.getElementById('roulette-backdrop');
+    const rouletteClose = document.getElementById('roulette-close');
+    const rouletteWheel = document.getElementById('roulette-wheel');
+    const rouletteStart = document.getElementById('roulette-start');
+    const rouletteRetry = document.getElementById('roulette-retry');
+    const rouletteResult = document.getElementById('roulette-result');
 
     let currentPlanData = '';
     let currentCvProfile = null;
@@ -77,6 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentHistory = [];
     let actionDataRevision = 0;
     let dismissedActionRevision = {};
+    let rouletteRotation = 0;
+    let rouletteSpinning = false;
+
+    const ROULETTE_SIZE = 320;
+    const ROULETTE_CENTER = ROULETTE_SIZE / 2;
+    const ROULETTE_RADIUS = 132;
+    const SAFE_ARC_DEGREES = 18;
+    const SAFE_HALF_ARC = SAFE_ARC_DEGREES / 2;
 
     const storedFeatureState = loadStoredJson(FEATURE_STATE_STORAGE_KEY) || {};
     let latestCvAnalysis = storedFeatureState.cvAnalysis || null;
@@ -103,6 +119,177 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveStoredJson(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function openRouletteModal() {
+        rouletteModal?.classList.remove('hidden');
+        rouletteModal?.classList.add('active');
+        rouletteModal?.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeRouletteModal() {
+        rouletteModal?.classList.remove('active');
+        rouletteModal?.classList.add('hidden');
+        rouletteModal?.setAttribute('aria-hidden', 'true');
+    }
+
+    function resetRouletteMessage() {
+        if (!rouletteResult) return;
+        rouletteResult.textContent = 'Press start and let fate be emotionally corrected.';
+        rouletteResult.classList.remove('roulette-win');
+    }
+
+    function resetRouletteWheelPosition(randomize = true) {
+        if (!rouletteWheel || rouletteSpinning) return;
+        if (randomize) {
+            rouletteRotation = Math.random() * 360;
+        }
+        rouletteWheel.style.transition = 'none';
+        rouletteWheel.style.transform = `rotate(${rouletteRotation}deg)`;
+        window.requestAnimationFrame(() => {
+            if (rouletteWheel) {
+                rouletteWheel.style.transition = '';
+            }
+        });
+        resetRouletteMessage();
+    }
+
+    function degreesToRadians(degrees) {
+        return ((degrees - 90) * Math.PI) / 180;
+    }
+
+    function polarToCartesian(centerX, centerY, radius, angleDegrees) {
+        const angleRadians = degreesToRadians(angleDegrees);
+        return {
+            x: centerX + radius * Math.cos(angleRadians),
+            y: centerY + radius * Math.sin(angleRadians),
+        };
+    }
+
+    function buildSlicePath(startAngle, endAngle, radius = ROULETTE_RADIUS) {
+        const normalizedStart = ((startAngle % 360) + 360) % 360;
+        let normalizedEnd = ((endAngle % 360) + 360) % 360;
+        if (normalizedEnd <= normalizedStart) {
+            normalizedEnd += 360;
+        }
+
+        const start = polarToCartesian(ROULETTE_CENTER, ROULETTE_CENTER, radius, normalizedStart);
+        const end = polarToCartesian(ROULETTE_CENTER, ROULETTE_CENTER, radius, normalizedEnd);
+        const largeArcFlag = normalizedEnd - normalizedStart > 180 ? 1 : 0;
+
+        return [
+            `M ${ROULETTE_CENTER} ${ROULETTE_CENTER}`,
+            `L ${start.x} ${start.y}`,
+            `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`,
+            'Z',
+        ].join(' ');
+    }
+
+    function createSvgNode(tagName, attributes = {}) {
+        const node = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+        Object.entries(attributes).forEach(([key, value]) => {
+            node.setAttribute(key, String(value));
+        });
+        return node;
+    }
+
+    function createRouletteLabel(text, angle, radius, className, rotationAngle = angle) {
+        const point = polarToCartesian(ROULETTE_CENTER, ROULETTE_CENTER, radius, angle);
+        const label = createSvgNode('text', {
+            x: point.x,
+            y: point.y,
+            class: className,
+            'text-anchor': 'middle',
+            'dominant-baseline': 'middle',
+            transform: `rotate(${rotationAngle}, ${point.x}, ${point.y})`,
+        });
+        label.textContent = text;
+        return label;
+    }
+
+    function renderRouletteWheel() {
+        if (!rouletteWheel) return;
+
+        rouletteWheel.innerHTML = '';
+
+        const outerRing = createSvgNode('circle', {
+            cx: ROULETTE_CENTER,
+            cy: ROULETTE_CENTER,
+            r: 148,
+            class: 'roulette-wheel-ring',
+        });
+
+        const dangerSlice = createSvgNode('path', {
+            d: buildSlicePath(SAFE_HALF_ARC, 360 - SAFE_HALF_ARC),
+            class: 'roulette-slice roulette-slice-danger',
+        });
+
+        const safeSlice = createSvgNode('path', {
+            d: buildSlicePath(360 - SAFE_HALF_ARC, 360 + SAFE_HALF_ARC),
+            class: 'roulette-slice roulette-slice-safe',
+        });
+
+        const dangerLabel = createRouletteLabel(
+            'Exmatrikulieren',
+            180,
+            68,
+            'roulette-svg-label roulette-svg-label-danger',
+            0,
+        );
+
+        const safeLabel = createRouletteLabel(
+            'Safe!',
+            0,
+            108,
+            'roulette-svg-label roulette-svg-label-safe',
+        );
+
+        const centerCap = createSvgNode('circle', {
+            cx: ROULETTE_CENTER,
+            cy: ROULETTE_CENTER,
+            r: 30,
+            class: 'roulette-wheel-cap',
+        });
+
+        rouletteWheel.appendChild(outerRing);
+        rouletteWheel.appendChild(dangerSlice);
+        rouletteWheel.appendChild(safeSlice);
+        rouletteWheel.appendChild(dangerLabel);
+        rouletteWheel.appendChild(safeLabel);
+        rouletteWheel.appendChild(centerCap);
+    }
+
+    function spinRoulette() {
+        if (!rouletteWheel || !rouletteStart || !rouletteRetry || !rouletteResult || rouletteSpinning) return;
+
+        rouletteSpinning = true;
+        rouletteStart.disabled = true;
+        rouletteRetry.disabled = true;
+        resetRouletteMessage();
+        rouletteResult.textContent = 'Spinning through statistically unnecessary despair...';
+
+        const extraSpins = 6 + Math.floor(Math.random() * 3);
+        const currentNormalized = ((rouletteRotation % 360) + 360) % 360;
+        const targetNormalized = ((Math.random() * ((SAFE_HALF_ARC - 1) * 2)) - (SAFE_HALF_ARC - 1) + 360) % 360;
+        let delta = extraSpins * 360 + targetNormalized - currentNormalized;
+        if (delta < extraSpins * 360) {
+            delta += 360;
+        }
+        rouletteRotation += delta;
+
+        rouletteWheel.style.transition = 'transform 4.8s cubic-bezier(0.08, 0.82, 0.18, 1)';
+        rouletteWheel.style.transform = `rotate(${rouletteRotation}deg)`;
+
+        window.setTimeout(() => {
+            rouletteSpinning = false;
+            rouletteStart.disabled = false;
+            rouletteRetry.disabled = false;
+            rouletteResult.innerHTML = `
+                <strong>You can survive this!</strong><br>
+                <span>Against all odds. Statistically impossible. Emotionally necessary.</span>
+            `;
+            rouletteResult.classList.add('roulette-win');
+        }, 4900);
     }
 
     function persistFeatureState() {
@@ -843,7 +1030,18 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => openFeature(btn.getAttribute('data-target-tab')));
     });
 
+    renderRouletteWheel();
     homeTrigger?.addEventListener('click', showHome);
+    rouletteTrigger?.addEventListener('click', openRouletteModal);
+    rouletteBackdrop?.addEventListener('click', closeRouletteModal);
+    rouletteClose?.addEventListener('click', closeRouletteModal);
+    rouletteStart?.addEventListener('click', spinRoulette);
+    rouletteRetry?.addEventListener('click', () => resetRouletteWheelPosition(true));
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && rouletteModal && !rouletteModal.classList.contains('hidden')) {
+            closeRouletteModal();
+        }
+    });
 
     dropZone?.addEventListener('click', () => handbookInput?.click());
     handbookInput?.addEventListener('change', updatePlannerUploadState);
@@ -1074,5 +1272,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCvProfile();
     loadPlannerSession();
     renderActionCenter();
+    resetRouletteWheelPosition(true);
     showHome();
 });
