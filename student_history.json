@@ -1,1 +1,79 @@
-[{"course": "Einf\u00fchrung in die Informatik", "grade": 1.3}, {"course": "Grundlagenpraktikum: Programmierung", "grade": 1.7}, {"course": "Einf\u00fchrung in die Wirtschaftsinformatik", "grade": 2.0}, {"course": "Diskrete Strukturen", "grade": 3.0}, {"course": "Financial Accounting", "grade": 4.0}]
+[
+  {
+    "courseName": "Linear Algebra for Computer Science",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Analysis for Computer Science",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Introduction to Software Engineering",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Fundamentals: Algorithms and Data Structures",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Cost Accounting",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Fundamentals: Databases",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Investment and Financial Management",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Applied Econometrics",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Fundamentals: Computer Networks and Distributed Systems",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Discrete Probability Theory",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  },
+  {
+    "courseName": "Introduction to Data Science and Statistical Thinking",
+    "grade": null,
+    "ects": null,
+    "semesterCompleted": "",
+    "category": ""
+  }
+]
